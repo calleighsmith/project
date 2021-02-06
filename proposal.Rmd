@@ -1,0 +1,47 @@
+---
+title: "Project Proposal"
+author: "Calleigh Smith"
+date: "Due 2/9/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Motivation
+
+According to he National Ocean Service, "Our oceans and coasts touch every American every day - providing us with places to live, food to eat, jobs, commerce, recreation, energy, even medicines that heal" [1]. For my project, I would like to explore the environmental status of beaches in the United States. Having grown up in a beach town and having been involved in several coastal initiatives throughout my life, including my Duke Engage Thailand program and a summer course in marine biology, I have developed a passion for the ocean and its preservation. Unfortunately, waters globally are highly vulnerable to human actions and exposed to threats such as pollution, climate change, algae blooms, coastal development, and more. In order to ensure the health of these natural environments and those who depend on them, it is essential that we understand the current status of coastal waters and which beaches are at risk for the future.
+
+This project is important because it has the potential to identify risk factors for the environmental degradation of beaches, which can in turn guide legislators to develop regulations regarding these bodies of water. Additionally, environmental protection of the oceans and coasts is futile without the education and engagement of the public. By statistically analyzing data relating to the oceans and the coasts and presenting it in a way that can be understood by a general audience, this project has the ability to spread awareness about the health of marine environments.
+
+# Data
+
+My data was obtained through the Environmental Protection Agency (EPA) as part of their BEACON 2.0 online system [2]. The EPA created the BEach Advisory and Closing Online Notification (BEACON) to meet the Agency's requirement to provide the public a database of pollution occurrences for coastal recreational waters. Under the Beaches Environmental Assessment and Coastal Health (BEACH) Act of 2000, EPA provides annual grants to coastal and Great Lakes states, territories, and eligible tribes to help local authorities monitor their coastal and Great Lakes beaches and notify the public of water quality conditions that may be unsafe for swimming. BEACON contains state-reported beach monitoring and notification data and is fully available online without the need for special permissions.
+
+The BEACON 2.0 online tool provides many reports on all beaches in the United States. Available datasets include:
+
+- "Action Duration," each action for each beach
+- "Advisory and Monitoring," presents a condensed combination of the "Action" and "Water Quality" Reports for the most recent 2 week period of submitted data
+- "Beach Actions (Advisories and Closures)," presents details of each beach action
+- "Beach Attributes," identifies attributes of each beach
+- "Beach Days," information about beach days in the swimming season
+- "Beach Monitoring Frequency," identifies swim season and monitoring attributes of each beach
+- "Beach Profile," which presents beach administrative information
+- "Local Action Decision Procedures," identifies Local Action Decision Procedures used to notify the public of beach actions
+- "Possible Pollution Sources," which identifies if possible pollution sources have been investigated or associated with a Beach Action
+- "State Summary," displays key summary statistics concerning beaches
+- "Tier 1 Stats," presents beach attributes and action information for each beach designated as Tier 1
+- "Water Quality," presents details of water quality monitoring results collected for the beach program
+- "WQS Criteria," presents details of the water quality standards that apply to the water accessible from the beach
+
+These datasets can be found in the "data" folder of this repository. Using BEACON 2.0's user guide found [here](https://www.epa.gov/sites/production/files/2014-08/documents/beacon_usersguide.pdf), one can view a full data dictionary, information on how to use the database, and basic summary statistics on some of the variables.
+
+# Research Questions
+
+Some questions that can be explored using the research motivation and available datasets include: Which beaches are at the least/greatest risk of advisories and closures on a spatial level? Which factors, such as pollution, beach use, beach location, and community input, affect the health of beaches? Over time, how has water quality changed, and how has this affected the public's access to these water sources?
+
+# References
+
+- [1] [National Ocean Service](https://aambpublicoceanservice.blob.core.windows.net/oceanserviceprod/about/nos_brochure.pdf)
+- [2] Data Source and Information: [BEACON 2.0](https://watersgeo.epa.gov/beacon2/)
