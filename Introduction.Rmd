@@ -15,7 +15,6 @@ library(gifski)
 library(viridis)
 library(patchwork)
 library(magick)
-
 ```
 
 ```{r, message = F, error=F, include=F}
@@ -59,7 +58,7 @@ beaches <- stratified(beaches, 7, .5) %>%
 
 According to he National Ocean Service, "Our oceans and coasts touch every American every day - providing us with places to live, food to eat, jobs, commerce, recreation, energy, even medicines that heal" [1]. Unfortunately, waters globally are highly vulnerable to human actions and exposed to threats such as pollution, climate change, algae blooms, coastal development, and more. In order to ensure the health of these natural environments and those who depend on them, it is essential that we understand the current status of coastal waters and which beaches are at risk for the future.
 
-This paper is important because it has the potential to identify risk factors for the environmental degradation of beaches, which can in turn guide legislators to develop regulations regarding these bodies of water. Additionally, environmental protection of the oceans and coasts is futile without the education and engagement of the public. Public knowledge of coastal conservation is limited. According to a survey by Lotze et al., 70% of respondents believe the marine environment is under threat from human activities, but only 15% thought the ocean's health was poor or threatened. By statistically analyzing data relating to the oceans and the coasts and presenting it in a way that can be understood by a general audience, this project has the ability to illustrate a clear picture of the threats to aquatic bodies in the U.S. and inform marine managers, policy makers, conservation practitioners, and educators to improve marine management and conservation programs.
+This paper is important because it has the potential to identify risk factors for the environmental degradation of beaches, which can in turn guide legislators to develop regulations regarding these bodies of water. Additionally, environmental protection of the oceans and coasts is futile without the education and engagement of the public. Public knowledge of coastal conservation is limited. According to a survey by Lotze et al., 70% of respondents believe the marine environment is under threat from human activities, but only 15% thought the ocean's health was poor or threatened [2]. By statistically analyzing data relating to the oceans and the coasts and presenting it in a way that can be understood by a general audience, this project has the ability to illustrate a clear picture of the threats to aquatic bodies in the U.S. and inform marine managers, policy makers, conservation practitioners, and educators to improve marine management and conservation programs.
 
 In our analysis, we will look at the following research questions:
 
@@ -69,17 +68,17 @@ In our analysis, we will look at the following research questions:
 
 # Data
 
-Our data was obtained through the Environmental Protection Agency (EPA) as part of their BEACON 2.0 online system [2]. The EPA created the BEach Advisory and Closing Online Notification (BEACON) to meet the Agency's requirement to provide the public a database of pollution occurrences for coastal recreational waters. Under the Beaches Environmental Assessment and Coastal Health (BEACH) Act of 2000, EPA provides annual grants to coastal and Great Lakes states, territories, and eligible tribes to help local authorities monitor their coastal and Great Lakes beaches and notify the public of water quality conditions that may be unsafe for swimming. BEACON contains state-reported beach monitoring and notification data and is fully available online without the need for special permissions.
+Our data was obtained through the Environmental Protection Agency (EPA) as part of their BEACON 2.0 online system [3]. The EPA created the BEach Advisory and Closing Online Notification (BEACON) to meet the Agency's requirement to provide the public a database of pollution occurrences for coastal recreational waters. Under the Beaches Environmental Assessment and Coastal Health (BEACH) Act of 2000, EPA provides annual grants to coastal and Great Lakes states, territories, and eligible tribes to help local authorities monitor their coastal and Great Lakes beaches and notify the public of water quality conditions that may be unsafe for swimming. BEACON contains state-reported beach monitoring and notification data and is fully available online without the need for special permissions.
 
 The BEACON 2.0 online tool provides many reports on all beaches in the United States. Available datasets include those related to each action for a beach, beach attributes and profiles, beach days, beach monitoring frequency, possible pollution sources, water quality, tier 1 beach information state summaries, and more. Using BEACON 2.0's user guide found [here](https://www.epa.gov/sites/production/files/2014-08/documents/beacon_usersguide.pdf), one can view a full data dictionary, information on how to use the database, and basic summary statistics on some of the variables.
 
-In this analysis, we will solely focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 50% of the beaches from each water body where data was available from the year 2020, which results in about 1,070 beaches in this analysis.
+In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 50% of the beaches from each water body where data was available from the year 2020, which results in about 1,070 beaches in this analysis.
 
-For our first research question on measuring risk factors, we will look at the numnber of days under action in a given year for each beach as the response variable. Features I would like to consider include action reason, beach ownership (private/public), beach length, water body type, beach monitoring frequency, water quality, and number of swim days. For our second research question, we will look at states, names of body waters, possible pollution sources, and water quality standards. For our third research question, we will look at local action decision procedures, which includes how governing bodies communicated beach actions with residents, and the reason/severity of the beach action.
+For our first research question on measuring risk factors, we will look at the numnber of days under action in a given year for each beach as the response variable. Features we would like to consider include action reason, beach ownership (private/public), beach length, water body type, beach monitoring frequency, water quality, and number of swim days. For our second research question, we will look at states, names of body waters, possible pollution sources, and water quality standards. For our third research question, we will look at local action decision procedures, which includes how governing bodies communicated beach actions with residents, and the reason/severity of the beach action.
 
 # EDA
 
-Based on some initial EDA 
+The first two research questions revolve around predicting the number of days under action for a beach and how pollutants are distributed, respectively. In the first map below, one can see that the number of days under action vary depending on the year and region. In particular, it appears that the Gulf of Mexico and the West coast have a particularly high concentration of beaches with many days under action.  In the second map below, one can see that the number of pollutants vary over time and by region.  The most obvious observation is that from 2016 onward, it appears that the beaches of Southern California have experienced more pollution sources than in previous years. Both of these maps provide some initial insight into the state of beaches historically to present times and suggest that there may be a relationship between number of days under action and pollutants depending on the time period and region.
 
 ```{r}
 us = map_data("state")
@@ -113,12 +112,12 @@ a <- ggplot() +
                                        y=as.double(start_latitude),
                                        color=as.integer(no_of_days_under_action), 
                                        size=as.integer(no_of_days_under_action)), 
-             alpha = 0.5, size=3) +
+             alpha = 0.5) +
   labs(color = "Number of Days Under Action", 
        title = "West Coast and Gulf of Mexico Have Most Number of Days Under Action", 
        subtitle = "Year: {frame_time}") +
   transition_time(year) +
-  scale_color_viridis(option="magma", direction = -1, guide = guide_legend()) +
+  scale_color_viridis(option="viridis", direction = -1, guide = guide_legend(), begin=.1) +
   ease_aes('linear')+
   scale_size(guide = FALSE) + # no legend for size
   theme_void()+
@@ -132,13 +131,13 @@ b<- ggplot() +
   geom_point(data=beach_actions, aes(x=as.double(start_longitude), 
                                      y=as.double(start_latitude),
                                      color=as.integer(no_pollutants), 
-                                     size=as.integer(no_pollutants)), 
-             alpha = .1, size=3) +
+                                     size=as.integer(no_pollutants)+2), 
+             alpha = .1) +
   labs(color = "Number of Pollutants", 
        title = "Number of Pollutants Increases in California Since 2016", 
        subtitle = "Year: {frame_time}") +
   transition_time(year) +
-  scale_color_viridis(option="magma", direction = -1, guide = guide_legend()) +
+  scale_color_viridis(option="viridis", direction = -1, guide = guide_legend(), begin=.1) +
   ease_aes('linear')+
   scale_size(guide = FALSE) + 
   theme_void()+
@@ -155,7 +154,10 @@ for(i in 2:21){
   new_gif <- c(new_gif, combined)
 }
 
+new_gif
 ```
+
+In the following plot, one can observe the ways that local governments communicate with residents about actions which affect community beaches. This plot can provide some preliminary insight into our last research question, which revolves around the transparency of local governments in reporting news about beaches to citizens. From this plot, it appears that the most common methods of communication by local governments include posting notifications on the internet or at the beaches themselves.
 
 ```{r, fig.width=6, fig.height=8,fig.align='center'}
 local_action_decision_procedures[local_action_decision_procedures=="-"] <- "No"
@@ -242,8 +244,13 @@ lad8 <- ggplot(local_action_decision_procedures, aes(x=other, fill=other))+
 
 lad <- (lad1 + lad2 + lad3 +lad4) / (lad5+lad6+lad7+lad8)
 gt <- patchworkGrob(lad)
-new_gif
 gridExtra::grid.arrange(gt, left = "Number of Beaches", bottom = "", 
                         top = "Local Governments Communicate with Citizens \nThrough Postings on the Internet and the Beach")
 
 ```
+
+# References
+
+- [1] [National Ocean Service](https://aambpublicoceanservice.blob.core.windows.net/oceanserviceprod/about/nos_brochure.pdf)
+- [2] [Lotze et al. "Public Perceptions of Marine Threats and Protection from around the World"](http://lotzelab.biology.dal.ca/wp-content/uploads/Lotze-etal_2018_OCMA_public-perceptions.pdf)
+- [3] Data Source and Information: [BEACON 2.0](https://watersgeo.epa.gov/beacon2/)

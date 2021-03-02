@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/732807/a81abc5d838a45479060938c2af9cca3
+bundleId: https://api.rpubs.com/api/v1/document/732807/a81abc5d838a45479060938c2af9cca3
+url: http://rpubs.com/calleighsmith/732807
+when: 1614719213.88557
