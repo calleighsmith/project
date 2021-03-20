@@ -53,12 +53,12 @@ beaches <- beach_profile %>%
 beaches <- stratified(beaches, 7, .5) %>%
   pull(beach_id)
 ```
-
-# Overview
+# Introduction
+## Overview
 
 According to he National Ocean Service, "Our oceans and coasts touch every American every day - providing us with places to live, food to eat, jobs, commerce, recreation, energy, even medicines that heal" [1]. Unfortunately, waters globally are highly vulnerable to human actions and exposed to threats such as pollution, climate change, algae blooms, coastal development, and more. In order to ensure the health of these natural environments and those who depend on them, it is essential that we understand the current status of coastal waters and which beaches are at risk for the future.
 
-This paper is important because it has the potential to identify risk factors for the environmental degradation of beaches, which can in turn guide legislators to develop regulations regarding these bodies of water. Additionally, environmental protection of the oceans and coasts is futile without the education and engagement of the public. Public knowledge of coastal conservation is limited. According to a survey by Lotze et al., 70% of respondents believe the marine environment is under threat from human activities, but only 15% thought the ocean's health was poor or threatened [2]. By statistically analyzing data relating to the oceans and the coasts and presenting it in a way that can be understood by a general audience, this project has the ability to illustrate a clear picture of the threats to aquatic bodies in the U.S. and inform marine managers, policy makers, conservation practitioners, and educators to improve marine management and conservation programs.
+This paper will identify risk factors for the environmental degradation of beaches, which can in turn guide legislators to develop regulations regarding these bodies of water. Additionally, environmental protection of the oceans and coasts is futile without the education and engagement of the public. Public knowledge of coastal conservation is limited. According to a survey by Lotze et al., 70% of respondents believe the marine environment is under threat from human activities, but only 15% thought the ocean's health was poor or threatened [2]. By statistically analyzing data relating to the oceans and the coasts and presenting it in a way that can be understood by a general audience, this project has the ability to illustrate a clear picture of the threats to aquatic bodies in the U.S. and inform marine managers, policy makers, conservation practitioners, and educators to improve marine management and conservation programs.
 
 In our analysis, we will look at the following research questions:
 
@@ -66,17 +66,17 @@ In our analysis, we will look at the following research questions:
 - **Measuring Pollution**: How are the different types of pollution (algal, animal, sewer line, etc.) distributed across U.S. waters? Are certain regions more prone to certain pollution types of pollution than others?
 - **Measuring Government Communication with Locals**: How do local governments communicate with citizens when there is a beach advisory or closing? Are governments transparent in reporting the risks associated with local bodies of water to residents?
 
-# Data
+## Data
 
-Our data was obtained through the Environmental Protection Agency (EPA) as part of their BEACON 2.0 online system [3]. The EPA created the BEach Advisory and Closing Online Notification (BEACON) to meet the Agency's requirement to provide the public a database of pollution occurrences for coastal recreational waters. Under the Beaches Environmental Assessment and Coastal Health (BEACH) Act of 2000, EPA provides annual grants to coastal and Great Lakes states, territories, and eligible tribes to help local authorities monitor their coastal and Great Lakes beaches and notify the public of water quality conditions that may be unsafe for swimming. BEACON contains state-reported beach monitoring and notification data and is fully available online without the need for special permissions.
+Our data were obtained through the Environmental Protection Agency (EPA) as part of their BEACON 2.0 online system [3]. The EPA created the BEach Advisory and Closing Online Notification (BEACON) to meet the Agency's requirement to provide the public a database of pollution occurrences for coastal recreational waters. Under the Beaches Environmental Assessment and Coastal Health (BEACH) Act of 2000, EPA provides annual grants to coastal and Great Lakes states, territories, and eligible tribes to help local authorities monitor their coastal and Great Lakes beaches and notify the public of water quality conditions that may be unsafe for swimming. BEACON contains state-reported beach monitoring and notification data and is fully available online without the need for special permissions.
 
 The BEACON 2.0 online tool provides many reports on all beaches in the United States. Available datasets include those related to each action for a beach, beach attributes and profiles, beach days, beach monitoring frequency, possible pollution sources, water quality, tier 1 beach information state summaries, and more. Using BEACON 2.0's user guide found [here](https://www.epa.gov/sites/production/files/2014-08/documents/beacon_usersguide.pdf), one can view a full data dictionary, information on how to use the database, and basic summary statistics on some of the variables.
 
-In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 50% of the beaches from each water body where data was available from the year 2020, which results in about 1,070 beaches in this analysis.
+In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 50% of the beaches from each water body where data were available from the year 2020, which results in about 1,070 beaches in this analysis.
 
-For our first research question on measuring risk factors, we will look at the numnber of days under action in a given year for each beach as the response variable. Features we would like to consider include action reason, beach ownership (private/public), beach length, water body type, beach monitoring frequency, water quality, and number of swim days. For our second research question, we will look at states, names of body waters, possible pollution sources, and water quality standards. For our third research question, we will look at local action decision procedures, which includes how governing bodies communicated beach actions with residents, and the reason/severity of the beach action.
+For our first research question on measuring risk factors, we will look at the number of days under action in a given year for each beach as the response variable. Features we would like to consider include action reason, beach ownership (private/public), beach length, water body type, beach monitoring frequency, water quality, and number of swim days. For our second research question, we will look at states, names of body waters, possible pollution sources, and water quality standards. For our third research question, we will look at local action decision procedures, which includes how governing bodies communicated beach actions with residents, and the reason/severity of the beach action.
 
-# EDA
+## Descriptive Analysis
 
 The first two research questions revolve around predicting the number of days under action for a beach and how pollutants are distributed, respectively. In the first map below, one can see that the number of days under action vary depending on the year and region. In particular, it appears that the Gulf of Mexico and the West coast have a particularly high concentration of beaches with many days under action.  In the second map below, one can see that the number of pollutants vary over time and by region.  The most obvious observation is that from 2016 onward, it appears that the beaches of Southern California have experienced more pollution sources than in previous years. Both of these maps provide some initial insight into the state of beaches historically to present times and suggest that there may be a relationship between number of days under action and pollutants depending on the time period and region.
 
@@ -156,97 +156,29 @@ for(i in 2:21){
 
 new_gif
 ```
+*Note: The size of the points in this visualization correspond to the number of beach actions or number of pollutants (the same as the color representation). This was done for ease of identification of the more extreme values.
 
 In the following plot, one can observe the ways that local governments communicate with residents about actions which affect community beaches. This plot can provide some preliminary insight into our last research question, which revolves around the transparency of local governments in reporting news about beaches to citizens. From this plot, it appears that the most common methods of communication by local governments include posting notifications on the internet or at the beaches themselves.
 
-```{r, fig.width=6, fig.height=8,fig.align='center'}
+```{r, fig.width=8.5, fig.height=4,fig.align='center'}
 local_action_decision_procedures[local_action_decision_procedures=="-"] <- "No"
 local_action_decision_procedures <- local_action_decision_procedures %>%
   group_by(beach_id) %>% 
   filter(year == max(year))
 
-lad1 <- ggplot(local_action_decision_procedures, aes(x=posted_on_internet, fill=posted_on_internet))+
-  geom_bar() +
-  labs(x = "Posted on Internet",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
+methods = c("Posted on Internet", "Posted at Beach", "Sent to Phone List", "Announced on TV", "Announced on Radio", "Published in Newspaper", "Results on Request", "Other")
+methods_yes = c(3137,2644,1355,1204,1168,1081,236,55)
+eda_methods <- cbind(methods, methods_yes) %>%
+  as_tibble() %>%
+  mutate(methods_yes = as.numeric(methods_yes),
+         methods = fct_relevel(methods, levels = c("Other", "Results on Request", "Published in Newspaper", "Announced on Radio", "Announced on TV", "Sent to Phone List", "Posted at Beach", "Posted on Internet")))
+
+ggplot(eda_methods, aes(x = methods, y = methods_yes)) +
+  geom_bar(stat = "identity", fill = "seagreen1") +
+  geom_text(aes(label=methods_yes), hjust=0)+
+  coord_flip()+
   theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-lad2 <- ggplot(local_action_decision_procedures, aes(x=published_in_newspaper, fill=published_in_newspaper))+
-  geom_bar() +
-  labs(x = "Published in Newspaper",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
-  theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-lad3 <- ggplot(local_action_decision_procedures, aes(x=sent_to_phone_l_ist, fill=sent_to_phone_l_ist))+
-  geom_bar() +
-  labs(x = "Sent to Phone List",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
-  theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-
-lad4 <- ggplot(local_action_decision_procedures, aes(x=announcedon_radio, fill=announcedon_radio))+
-  geom_bar() +
-  labs(x = "Announced on Radio",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
-  theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-
-
-lad5 <- ggplot(local_action_decision_procedures, aes(x=posted_atthe_beach, fill=posted_atthe_beach))+
-  geom_bar() +
-  labs(x = "Posted at the Beach",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
-  theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-lad6 <- ggplot(local_action_decision_procedures, aes(x=announcedon_tv, fill=announcedon_tv))+
-  geom_bar() +
-  labs(x = "Announced on TV",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
-  theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-
-lad7 <- ggplot(local_action_decision_procedures, aes(x=provided_resultson_request, fill=provided_resultson_request))+
-  geom_bar() +
-  labs(x = "Provided Results on Request",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
-  theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-
-lad8 <- ggplot(local_action_decision_procedures, aes(x=other, fill=other))+
-  geom_bar() +
-  labs(x = "Other Communication",
-       y = "Number of Beaches") +
-  ylim(0,3700) +
-  scale_fill_manual(values = c("turquoise1", "seagreen1"))+
-  theme_minimal() +
-  theme(axis.title.y = element_blank(), legend.position = "none")
-
-lad <- (lad1 + lad2 + lad3 +lad4) / (lad5+lad6+lad7+lad8)
-gt <- patchworkGrob(lad)
-gridExtra::grid.arrange(gt, left = "Number of Beaches", bottom = "", 
-                        top = "Local Governments Communicate with Citizens \nThrough Postings on the Internet and the Beach")
-
+  labs(y = "Number of Beaches", x = "Method of Communication", title = "Most Common Method of Communicating Beach Actions to Citizens\nIs via Posting on the Internet")
 ```
 
 # References
