@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message=F, warning=F)
+library(MASS)
 library(tidyverse)
 library(splitstackshape)
 library(janitor)
@@ -15,11 +16,16 @@ library(gifski)
 library(viridis)
 library(patchwork)
 library(magick)
+library(AER)
+library(DHARMa)
+library(vcd)
+library(pscl)
 ```
 
 ```{r, message = F, error=F, include=F}
 action_duration <- read_csv("data/action_duration.csv") %>%
-  clean_names()
+  clean_names() %>%
+  dplyr::select(1:7)
 advisory_and_monitoring <- read_csv("data/advisory_and_monitoring.csv") %>%
   clean_names()
 beach_actions <- read_csv("data/beach_actions_(advisories_and_closures).csv") %>%
@@ -53,6 +59,39 @@ beaches <- beach_profile %>%
 beaches <- stratified(beaches, 7, .5) %>%
   pull(beach_id)
 ```
+
+```{r data-wrangling-q1}
+ba <- beach_attributes %>%
+  filter(beach_id %in% beaches) %>%
+  dplyr::select(year, beach_id, beach_length_mi) %>%
+  mutate(beach_length_mi = ifelse(beach_length_mi == "-", NA_character_, beach_length_mi)) %>%
+  fill(beach_length_mi) %>%
+  mutate(beach_length_mi = as.numeric(beach_length_mi))
+
+bp <- beach_profile %>%
+  filter(beach_id %in% beaches) %>%
+  dplyr::select(year, beach_id, waterbody_name, waterbody_type, swim_status, beach_access, beach_owner) %>%
+  mutate(beach_access = ifelse(beach_access == "null", NA_character_, beach_access),
+         beach_owner = ifelse(beach_owner == "-", NA_character_, beach_owner),
+         waterbody_name = ifelse(waterbody_name == "-", NA_character_, waterbody_name),
+         waterbody_type = ifelse(waterbody_type == "-", NA_character_, waterbody_type))
+
+watertype <-  beach_wqs_criteria_names_and_values %>%
+  filter(beach_id %in% beaches) %>%
+  dplyr::select(year, beach_id, water_type)
+
+t1stats <- tier_1_stats %>%
+  filter(beach_id %in% beaches) %>%
+  dplyr::select(year, beach_id, no_of_days_under_beach_action, swim_season_beach_days)
+
+risk1 <- inner_join(ba, bp)
+risk2 <- inner_join(risk1, watertype)
+risk <- inner_join(risk2, t1stats) %>%
+  filter(no_of_days_under_beach_action < 365) %>%
+  group_by(beach_id) %>%
+  slice(which.max(year))
+```
+
 # Introduction
 ## Overview
 
@@ -160,6 +199,17 @@ new_gif
 
 In the following plot, one can observe the ways that local governments communicate with residents about actions which affect community beaches. This plot can provide some preliminary insight into our last research question, which revolves around the transparency of local governments in reporting news about beaches to citizens. From this plot, it appears that the most common methods of communication by local governments include posting notifications on the internet or at the beaches themselves.
 
+```{r}
+p1<- ggplot(risk, aes(x=no_of_days_under_beach_action))+
+  geom_histogram(fill ="seagreen1", color="black") +
+  labs(title = "Number of Days Under Beach Action\nIs Right-Skewed",
+        y = "Number of Beach-Year Combinations", 
+        x = "Number of Days") +
+  theme_minimal()
+
+#p1
+```
+
 ```{r, fig.width=8.5, fig.height=4,fig.align='center'}
 local_action_decision_procedures[local_action_decision_procedures=="-"] <- "No"
 local_action_decision_procedures <- local_action_decision_procedures %>%
@@ -179,6 +229,58 @@ ggplot(eda_methods, aes(x = methods, y = methods_yes)) +
   coord_flip()+
   theme_minimal() +
   labs(y = "Number of Beaches", x = "Method of Communication", title = "Most Common Method of Communicating Beach Actions to Citizens\nIs via Posting on the Internet")
+```
+
+# Methodology
+
+## Measuring Risk Factors
+
+For this research question, the main goal is to predict the number of days under beach action for Tier 1 beaches in our random sample.  We will mainly consider features related to the physical characteristics of the beach. These features include the beach length, whether the beach is privately owned, whether the beach is accessible to the public, the water body and type of water body that the beach belongs to, the swim status of the beach, swim season length, the water type of the beach (i.e. marine or freshwater), and the number of days in the swim season. We will use the most recent observation from our random sample of Tier 1 Beaches ($n$ = 391).
+
+Upon inspection, it appears that there are several outliers in the data, specifically, beaches where there are many days in a year under beach action. We did not think it would be wise to remove these outliers, as it is meaningful to be able to predict the number of days under beach action for these extreme cases.
+
+Our response variable, number of days under beach action, is a discrete count which is also highly skewed right. Since over-dispersion appeared to be an issue, a Poisson model was deemed to not be ideal. However, a Negative Binomial (NB) model, which is often used instead of a Poisson model to deal with the issue of over-dispersion, appeared to be a worthy alternative.  Additionally, our outcome is zero-inflated, as confirmed by a zero inflation test on the residuals, and there is evidence of over-dispersion. To test for this, we performed an ANOVA test using AIC as the criterion to decipher whether a zero-inflated NB model or a regular NB model performed better, and the zero-inflated NB model had a lower AIC.  Therefore, in order to model the number of days under beach action, we will use a zero-inflated Negative Binomial model.
+
+One of the assumptions with using a zero-inflated Negative Binomial model is that there should not be collinearity among the predictors. Using VIF, we were able to identify that the variables water type (i.e. freshwater, marine, both), water body type (i.e. Sound/Bay/Inlet, Still Water, Open Coast), and water body name were highly correlated. Therefore, we chose water body name, as this is the most specific of the three variables.  Another assumption is that the outcome llows a NB distribution. We created an ord plot, which helps in identifying which count data model is underlying, and obtained a positive slope and intercept, which indeed speaks for a negative binomial distribution. Upon inspection of the residual plots, specifically the QQ plot of the deviance residuals and the plot of the residuals vs. predicted appear satisfactory.
+
+```{r}
+#m_pois <- glm(no_of_days_under_beach_action ~ . -year -beach_id, risk, family = "poisson")
+#summary(m_pois)
+#dispersiontest(m_pois) #over-dispersion is present
+
+m<- glm.nb(no_of_days_under_beach_action ~ . -year -beach_id-water_type-waterbody_type, risk)
+
+m2 <- zeroinfl(no_of_days_under_beach_action ~ . -year -beach_id -water_type-waterbody_type, risk, dist="negbin")
+summary(m2)
+```
+
+# Appendix
+
+```{r, fig.align='center'}
+# check what the underlying count distribution is
+Ord_plot(risk$no_of_days_under_beach_action)
+
+# check which variables are significant in an ANOVA test
+anova(m, test="Chisq")
+
+# check which points are more influential
+car::influencePlot(m)
+
+# check for multicollinearity
+car::vif(m)
+
+# check if zero-inflated or non-zero-inflated model is better
+AIC(m, m2)
+
+# plot residuals
+resids <- simulateResiduals(m, integerResponse=T)
+plot(resids)
+
+#outliers
+outliers <- outliers(resids)
+
+# test for zero-inflation
+testZeroInflation(resids)
 ```
 
 # References
