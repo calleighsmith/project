@@ -1,0 +1,12 @@
+name: beach
+title: beach
+username:
+account: calleigh
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3841306
+bundleId: 4386753
+url: https://calleigh.shinyapps.io/beach/
+when: 1616540928.54531
+asMultiple: FALSE
+asStatic: FALSE
