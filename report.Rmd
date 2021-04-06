@@ -1,8 +1,13 @@
 ---
-title: "Project Introduction: Analyzing U.S. Beaches"
+title: "Analyzing the Environmental Factors of U.S. Beaches"
 author: "Calleigh Smith"
-date: "Due 3/2/2021"
-output: html_document
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
@@ -20,6 +25,18 @@ library(AER)
 library(DHARMa)
 library(vcd)
 library(pscl)
+library(lme4)
+library(shiny)
+library(gtsummary)
+library(kableExtra)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+library(maps)
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(ggiraph)
 ```
 
 ```{r, message = F, error=F, include=F}
@@ -134,7 +151,7 @@ action_duration <-action_duration %>%
          start_longitude < which.min(us$long))
 
 
-beach_actions <-beach_actions %>%
+beach_actions_t1 <-beach_actions %>%
   filter(beach_id %in% beaches) %>%
   left_join(beach_attributes, by = c("beach_id", "year")) %>%
   filter(start_latitude > 23,
@@ -169,7 +186,7 @@ a_gif = animate(a, duration = 21, nframes=21)
 b<- ggplot() +
   geom_map(data=us, map=us, aes(x=long, y=lat, map_id=region), 
            color="grey", fill=NA) +
-  geom_point(data=beach_actions, aes(x=as.double(start_longitude), 
+  geom_point(data=beach_actions_t1, aes(x=as.double(start_longitude), 
                                      y=as.double(start_latitude),
                                      color=as.integer(no_pollutants), 
                                      size=as.integer(no_pollutants)+2), 
@@ -243,16 +260,49 @@ For this research question, the main goal is to predict the number of days under
 
 Upon inspection, it appears that there are several outliers in the data, specifically, beaches where there are many days in a year under beach action. We did not think it would be wise to remove these outliers, as it is meaningful to be able to predict the number of days under beach action for these extreme cases.
 
-Our response variable, number of days under beach action, is a discrete count which is also highly skewed right. Since over-dispersion appeared to be an issue, a Poisson model was deemed to not be ideal. However, a Negative Binomial (NB) model, which is often used instead of a Poisson model to deal with the issue of over-dispersion, appeared to be a worthy alternative.  Additionally, our outcome is zero-inflated, as confirmed by a zero inflation test on the residuals, and there is evidence of over-dispersion. To test for this, we performed an ANOVA test using AIC as the criterion to decipher whether a zero-inflated NB model or a regular NB model performed better, and the zero-inflated NB model had a lower AIC.  Therefore, in order to model the number of days under beach action, we will use a zero-inflated Negative Binomial model.
+Our response variable, number of days under beach action, is a discrete count which is also highly skewed right. Since over-dispersion appeared to be an issue, a Poisson model was deemed to not be ideal. However, a Negative Binomial (NB) model, which is often used instead of a Poisson model to deal with the issue of over-dispersion, appeared to be a worthy alternative.  Additionally, our outcome is zero-inflated, as confirmed by a zero inflation test on the residuals, and there is evidence of over-dispersion. To test for this, we performed an ANOVA test using AIC as the criterion to decipher whether a zero-inflated NB model or a regular NB model performed better, and the zero-inflated NB model had a lower AIC.  Therefore, in order to model the number of days under beach action, we will use a zero-inflated Negative Binomial model. 
 
-One of the assumptions with using a zero-inflated Negative Binomial model is that there should not be collinearity among the predictors. Using VIF, we were able to identify that the variables water type (i.e. freshwater, marine, both), water body type (i.e. Sound/Bay/Inlet, Still Water, Open Coast), and water body name were highly correlated. Therefore, we chose water body name, as this is the most specific of the three variables.  Another assumption is that the outcome llows a NB distribution. We created an ord plot, which helps in identifying which count data model is underlying, and obtained a positive slope and intercept, which indeed speaks for a negative binomial distribution. Upon inspection of the residual plots, specifically the QQ plot of the deviance residuals and the plot of the residuals vs. predicted appear satisfactory.
+Our outcome, number of days under beach action, follows a NB distribution. We confirmed this by creating an ord plot, which helps in identifying which count data model is underlying, and obtained a positive slope and intercept indicative of a negative binomial distribution. Upon inspection of the residual plots, specifically the QQ plot of the deviance residuals and the plot of the residuals vs. fitted values, the model assumptions appear satisfactory.
+
+In fitting our zero-inflated Negative Binomial model, we ran into the issue of collinearity among the predictors. Using VIF, we were able to identify that the variables water type (i.e. freshwater, marine, both), water body type (i.e. Sound/Bay/Inlet, Still Water, Open Coast), and water body name were highly correlated. Therefore, we chose water body name, as this is the most specific of the three variables.
+
+One consideration in approaching this research question was whether it was appropriate to include an offset term based on the number of days a beach is "eligible" for beach actions. However, a major class of beach actions include rain and weather advisories, like hurricanes, that can affect beaches during their non-swimming seasons. For example, Atlantic hurricane season takes place from June through November, whereas swimming season on Long Island, NY, which is on the Atlantic ocean, takes place from June through September (Memorial Day to Labor Day). Therefore, we decided that it would be too restrictive to include an offset term.
 
 The full model specification is as follows:
-(Insert model equation here)
+$$
+\begin{aligned}
+\mu_i = \text{exp}(\text{ln}(t_i) &+ \beta_1 + \beta_2\times \text{beach length}_i +\beta_3\times I(\text{water body name}_i = \text{Chesapeake Bay}) \\
+&+ \beta_4\times I(\text{water body name}_i = \text{Gulf of Mexico}) + \beta_5\times I(\text{water body name}_i = \text{Inland})\\
+&+ \beta_6\times I(\text{water body name}_i = \text{Lake Erie}) + \beta_7\times I(\text{water body name}_i = \text{Lake Huron}) \\
+&+ \beta_8\times I(\text{water body name}_i = \text{Lake Michigan}) + \beta_9\times I(\text{water body name}_i = \text{Lake Ontario})\\
+&+ \beta_{10}\times I(\text{water body name}_i = \text{Lake Superior}) + \beta_{11}\times I(\text{water body name}_i = \text{Long Island Sound}) \\
+&+ \beta_{12}\times I(\text{water body name}_i = \text{Pacific Ocean}) + \beta_{13}\times I(\text{swim status}_i = \text{No Advisory or Closure})\\
+&+ \beta_{14}\times I(\text{beach access}_i = \text{Public}) + \beta_{15}\times I(\text{beach owner}_i = \text{Public}) + \beta_{16}\times \text{days in swim season}_i).
+\end{aligned}
+$$
+Using this notation, the fundamental negative binomial regression model for a beach $i$ is written as $$Pr(Y=y_i\mid\mu_i, \alpha) =\frac{\Gamma(y_i +\alpha^{-1})}{\Gamma(\alpha^{-1})\Gamma(y_i+1)}\left(\frac{1}{1+\alpha\mu_i}\right)^{\alpha^{-1}}\left(\frac{\alpha\mu_i}{1+\alpha\mu_i}\right)^{y_i}.$$
 
 Finally, as prediction is a goal of this analysis, we will create a test set comprised of the second most recent observation for each tier 1 beach as our test set. We will then use our model to predict the number of days under beach action for the test set, which will give us some insight into our model's predictive accuracy using metrics such as the mean square error.
 
 ## Measuring Pollution
+
+In this question, we will seek to better understand how pollution is distributed across US waters, such as in the Pacific Ocean, Atlantic Ocean, Gulf of Mexico, etc. Our response variable is the number of pollutants found at a given beach since 2015 (note that pollutants can repeat if they return the next year). Our main variable of interest will be water body name, but we will include other covariates from our first research question as controls in our model as well as the action type as a result of the pollution.
+
+One issue with model fitting of this type is that the observations are not independent because pollutants at beaches within the same main body of water are likely correlated. Therefore, the independence assumption that most simple generalized linear models require to fit is violated.  One might consider an aggregated approach, where rather than considering the individual beaches in a body of water, we consider the average of all beaches within a body of water. While this aggregated approach would be independent, it would not take advantage of all of the data. In our dataset, there are 12 water bodies, so this aggregate approach would only consider 12 data points, which would result in very low power. Another approach would be to fit 12 separate models, one for the beaches in each body of water. However, this results in multiple regression models for each body of water and does not take advantage of the information in the data from other bodies of water. This can also add noise to the estimates in each model, as the models are not built off of that much data.
+
+One solution is to create a random intercepts linear mixed model (LMM). In our analysis, it is reasonable enough to assume that beaches in different bodies of water are not correlated (although this is not entirely true and will be discussed as a limitation later in the Discussion). LMMs depend on fixed and random effects. In our model, the fixed effects are the normal explanatory variables like in simple linear regression, and we will consider the fixed effects as covariates. The random effect is the variable that seeks to explain our grouping factor, which in our case is the body of water. The model assumptions for LMMs are similar to simple linear regression. There should be no patterns in the residuals vs. fitted plot and normality in the residuals. 
+
+The full model specification is as follows for the $i$-th beach for the $j$-th body of water:
+
+$$
+\begin{aligned}
+Y_{ij} = (\gamma_{00}+u_{0j})&+\gamma_{10}\text{Beach Length}_{ij} + \gamma_{20}I(\text{Beach Access}_{ij} = \text{Public}) + \gamma_{30}I(\text{Beach Owner}_{ij} = \text{Public}) \\
+&+ \gamma_{40}\text{Swim Season Beach Days}_{ij} + \gamma_{50}I(\text{Action Type}_{ij} = \text{Contamination Advisory})\\
+&+\gamma_{60}I(\text{Action Type}_{ij} = \text{Permanent Closure}) + \gamma_{70}I(\text{Action Type}_{ij} = \text{Posing}) \\
+&= \gamma_{80}I(\text{Action Type}_{ij} = \text{Rain Advisory})
+\end{aligned}
+$$
+where $u_{0j}$ is the random effect term. Using this modeling approach, we will be able to decipher how much of the variance in total pollutants at beaches can be explained by the body of water that these beaches find themselves situated near. We will present the variation among the bodies of water visually by plotting the overall model estimate for the intercepts.
 
 ## Measuring Government Communication with Locals
 
@@ -287,19 +337,201 @@ states_comms <- local_action_decision_procedures %>%
 ```
 
 # Results
-```{r, include=F}
+
+## Measuring Risk
+
+Below one can find the results from the zero-inflated negative binomial model which predicts the numnber of days under beach action using features related to beach attributes.
+
+```{r, fig.align='center'}
 #m_pois <- glm(no_of_days_under_beach_action ~ . -year -beach_id, risk, family = "poisson")
 #summary(m_pois)
 #dispersiontest(m_pois) #over-dispersion is present
 
+labels <- c("Intercept", "Beach Length (mi)", "Water Body (Chesapeake Bay)", "Water Body (Gulf of Mexico)",
+                  "Water Body (Inland)", "Water Body (Lake Erie)", "Water Body (Lake Huron)", 
+                  "Water Body (Lake Michigan)", "Water Body (Lake Ontario)", "Water Body (Lake Superior)", "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Swim Status (No advisory or closure)",  "Beach Access (Public)",  "Beach Owner (Public)", "Swim Season (day)")
+
 m<- glm.nb(no_of_days_under_beach_action ~ . -year -beach_id-water_type-waterbody_type, risk)
 
 m2 <- zeroinfl(no_of_days_under_beach_action ~ . -year -beach_id -water_type-waterbody_type, risk, dist="negbin")
-summary(m2)
+tab_model(m2, digits = 4, show.zeroinf = T,
+          pred.labels = c(labels, labels),
+          dv.labels = "Number of Days Under Beach Action"
+)
+
 ```
+
+## Measuring Pollution
+
+$$
+\begin{aligned}
+Y_{ij} = (\gamma_{00}+u_{0j})&+\gamma_{10}\text{Beach Length}_{ij} + \gamma_{20}I(\text{Beach Access}_{ij} = \text{Public}) + \gamma_{30}I(\text{Beach Owner}_{ij} = \text{Public}) \\
+&+ \gamma_{40}\text{Swim Season Beach Days}_{ij} + \gamma_{50}I(\text{Action Type}_{ij} = \text{Contamination Advisory})\\
+&+\gamma_{60}I(\text{Action Type}_{ij} = \text{Permanent Closure}) + \gamma_{70}I(\text{Action Type}_{ij} = \text{Posing}) \\
+&= \gamma_{80}I(\text{Action Type}_{ij} = \text{Rain Advisory})
+\end{aligned}
+$$
+
+```{r}
+beach_actions_tier1 <-beach_actions %>%
+  filter(beach_id %in% beaches) %>%
+  mutate(no_pollutants = case_when(
+    action_reasons == "-" ~ NA_integer_,
+    TRUE ~ lengths(strsplit(action_reasons, ", "))
+  ))
+  
+risk3 <- inner_join(risk2, t1stats)
+
+risk3 <- risk3 %>%
+  group_by(beach_id)%>%
+  slice(which.max(year))
+
+pollution <- beach_actions_tier1 %>%
+  group_by(beach_id) %>% 
+  arrange(desc(year)) %>% 
+  slice(1:5)
+ 
+pollution <- pollution %>%
+  group_by(beach_id)%>%
+  summarise(no_pollutants5 = sum(no_pollutants), obs=n()) %>%
+  filter(obs>=5) %>%
+  inner_join(risk3) %>%
+  filter(!is.na(waterbody_name))
+
+ggplot(pollution, aes(x=no_pollutants5)) +
+  geom_histogram()
+```
+
+```{r}
+lmm <- lmer(no_pollutants5 ~  beach_length_mi + beach_access + beach_owner + swim_season_beach_days  + (1|waterbody_name), data = pollution)
+summary(lmm)
+```
+```{r}
+print(paste0("LMM waterbody name accounts for ", round(0.5871*100/(0.5871+1.66), 2), "% of total variance"))
+```
+
+```{r}
+plot(lmm)
+qqnorm(resid(lmm))
+qqline(resid(lmm))
+```
+## How States Communicate with Citizens about Their Beaches
+
+Below, one can observe how beaches in each state communicate with residents along with the environmental literacy ratings for each state. To change the method of communication, use the drop-down input to select the desired output.
+
+```{r, echo=FALSE}
+state_long_lat <- read_csv("state_long_lat.csv")
+environmental_literacy <- read_csv("environmental_literacy.csv") %>%
+  mutate(level = case_when(
+    rating >= 0.5 ~ "Good",
+    rating < 0.5 ~ "Poor"
+  ),
+  state = ifelse(state == "DC", "District of Columbia", state))
+
+environmental_literacy <- left_join(environmental_literacy, state_long_lat, by = c("state" = "name")) %>%
+  filter(!state %in% c("Hawaii", "Alaska"))
+
+states_comms <- local_action_decision_procedures %>%
+  filter(!state_code %in% c("AS", "GU", "MP", "VI")) %>%
+  mutate(state_code = case_when(
+    state_code %in% c("MK", "ST")~ "WA",
+    state_code == "BR" ~ "WI",
+    state_code == "GP" ~ "MN",
+    TRUE ~ as.character(state_code))) %>%
+  group_by(state_code) %>%
+  summarize(prob_internet = mean(posted_on_internet), prob_newspaper = mean(published_in_newspaper),
+            prob_phone = mean(sent_to_phone_l_ist), prob_radio = mean(announcedon_radio),
+            prob_beach = mean(posted_atthe_beach), prob_tv = mean(announcedon_tv), 
+            prob_request = mean(provided_resultson_request), prob_other = mean(other))
+
+us = map_data("state")
+
+#'x' is the column of a data.frame that holds 2 digit state codes
+stateFromLower <-function(x) {
+  #read 52 state codes into local variable [includes DC (Washington D.C. and PR (Puerto Rico)]
+  st.codes<-data.frame(
+    state=as.factor(c("AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA",
+                      "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME",
+                      "MI", "MN", "MO", "MS",  "MT", "NC", "ND", "NE", "NH", "NJ", "NM",
+                      "NV", "NY", "OH", "OK", "OR", "PA", "PR", "RI", "SC", "SD", "TN",
+                      "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY")),
+    full=as.factor(c("alaska","alabama","arkansas","arizona","california","colorado",
+                     "connecticut","district of columbia","delaware","florida","georgia",
+                     "hawaii","iowa","idaho","illinois","indiana","kansas","kentucky",
+                     "louisiana","massachusetts","maryland","maine","michigan","minnesota",
+                     "missouri","mississippi","montana","north carolina","north dakota",
+                     "nebraska","new hampshire","new jersey","new mexico","nevada",
+                     "new york","ohio","oklahoma","oregon","pennsylvania","puerto rico",
+                     "rhode island","south carolina","south dakota","tennessee","texas",
+                     "utah","virginia","vermont","washington","wisconsin",
+                     "west virginia","wyoming"))
+  )
+  #create an nx1 data.frame of state codes from source column
+  st.x<-data.frame(state=x)
+  #match source codes with codes from 'st.codes' local variable and use to return the full state name
+  refac.x<-st.codes$full[match(st.x$state,st.codes$state)]
+  #return the full state names in the same order in which they appeared in the original source
+  return(refac.x)
+} 
+
+# Define UI
+ui <- fluidPage(
+  tags$head(tags$style(HTML("
+                                #final_text {
+                                  text-align: center;
+                                }
+                                div.box-header {
+                                  text-align: center;
+                                }
+                                "))),
+  mainPanel(
+    selectInput("method",
+                "Method of Communication:",
+                c("Posted on Internet" = "prob_internet",
+                  "Posted at Beach" = "prob_beach",
+                  "Announced in Newspaper" = "prob_newspaper",
+                  "Announced on Radio" = "prob_radio",
+                  "Announced on TV" = "prob_tv",
+                  "Sent to Phone List" = "prob_phone",
+                  "Results on Request" = "prob_request",
+                  "Other" = "prob_other")),
+    girafeOutput("distPlot", width="800px", height="600px"),
+  )
+        
+   
+)
+
+states_comms$region <- stateFromLower(states_comms$state_code)
+us_states_elec <- left_join(us, states_comms)
+
+
+server <- function(input, output) {
+
+    output$distPlot <- renderGirafe({
+      p <- (ggplot(data=us_states_elec, aes_string(x="long", y="lat", group="group", fill=input$method)) +
+        geom_polygon(color = "black", size = 0.1)+
+        geom_point(data=environmental_literacy, aes(x=longitude, y=latitude, size = rating), color="black", inherit.aes = FALSE) +
+        guides(size=guide_legend("Environmental Literacy Rating")) +
+        scale_fill_gradientn(colours = rev(terrain.colors(10)), na.value = "lightgrey") +
+        theme(strip.background = element_blank()) +
+        theme_map(base_size = 12) + 
+        labs(fill = "Percent of Beaches Using this Method of Communication") +
+        theme(legend.position="bottom", legend.box="vertical", legend.margin=margin(), legend.justification = "center"))
+      
+      girafe(code = print(p))
+
+    })
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server, options = list(height = 800))
+
+
+```
+
 # Discussion
 
-```{r, fig.align='center', include=F}
+```{r, fig.align='center', include=T}
 # check what the underlying count distribution is
 Ord_plot(risk$no_of_days_under_beach_action)
 
@@ -326,6 +558,10 @@ outliers <- outliers(resids)
 testZeroInflation(resids)
 ```
 
+```{r}
+# check what the underlying count distribution is
+Ord_plot(pollution$no_pollutants5)
+```
 # References
 
 - [1] [National Ocean Service](https://aambpublicoceanservice.blob.core.windows.net/oceanserviceprod/about/nos_brochure.pdf)
