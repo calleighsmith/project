@@ -73,8 +73,10 @@ beaches <- beach_profile %>%
   filter(beach_id %in% tier_1_beach_ids,
          year == 2020)
 
-beaches <- stratified(beaches, 7, .5) %>%
+beaches <- stratified(beaches, 7,.5) %>%
   pull(beach_id)
+
+test_set <- setdiff(tier_1_beach_ids, beaches)
 ```
 
 ```{r data-wrangling-q1}
@@ -271,18 +273,15 @@ One consideration in approaching this research question was whether it was appro
 The full model specification is as follows:
 $$
 \begin{aligned}
-\mu_i = \text{exp}(\text{ln}(t_i) &+ \beta_1 + \beta_2\times \text{beach length}_i +\beta_3\times I(\text{water body name}_i = \text{Chesapeake Bay}) \\
-&+ \beta_4\times I(\text{water body name}_i = \text{Gulf of Mexico}) + \beta_5\times I(\text{water body name}_i = \text{Inland})\\
-&+ \beta_6\times I(\text{water body name}_i = \text{Lake Erie}) + \beta_7\times I(\text{water body name}_i = \text{Lake Huron}) \\
-&+ \beta_8\times I(\text{water body name}_i = \text{Lake Michigan}) + \beta_9\times I(\text{water body name}_i = \text{Lake Ontario})\\
-&+ \beta_{10}\times I(\text{water body name}_i = \text{Lake Superior}) + \beta_{11}\times I(\text{water body name}_i = \text{Long Island Sound}) \\
-&+ \beta_{12}\times I(\text{water body name}_i = \text{Pacific Ocean}) + \beta_{13}\times I(\text{swim status}_i = \text{No Advisory or Closure})\\
-&+ \beta_{14}\times I(\text{beach access}_i = \text{Public}) + \beta_{15}\times I(\text{beach owner}_i = \text{Public}) + \beta_{16}\times \text{days in swim season}_i).
+\mu_i = \text{exp}(\text{ln}(t_i) &+ \beta_0 + \beta_1\times \text{beach length}_i +\beta_2\times I(\text{water body name}_i = \text{Chesapeake Bay}) \\
+&+ \beta_3\times I(\text{water body name}_i = \text{Gulf of Mexico}) + \beta_4\times I(\text{water body name}_i = \text{Great Lakes}) \\
+&+ \beta_{5}\times I(\text{water body name}_i = \text{Long Island Sound}) + \beta_{6}\times I(\text{water body name}_i = \text{Pacific Ocean}) \\ &+  \beta_{7}\times I(\text{swim status}_i = \text{No Advisory or Closure})+
+\beta_{8}\times I(\text{beach owner}_i = \text{Public}) + \beta_{9}\times \text{days in swim season}_i).
 \end{aligned}
 $$
 Using this notation, the fundamental negative binomial regression model for a beach $i$ is written as $$Pr(Y=y_i\mid\mu_i, \alpha) =\frac{\Gamma(y_i +\alpha^{-1})}{\Gamma(\alpha^{-1})\Gamma(y_i+1)}\left(\frac{1}{1+\alpha\mu_i}\right)^{\alpha^{-1}}\left(\frac{\alpha\mu_i}{1+\alpha\mu_i}\right)^{y_i}.$$
 
-Finally, as prediction is a goal of this analysis, we will create a test set comprised of the second most recent observation for each tier 1 beach as our test set. We will then use our model to predict the number of days under beach action for the test set, which will give us some insight into our model's predictive accuracy using metrics such as the mean square error.
+Finally, as prediction is a secondary goal of this analysis, we will create a test set comprised of the second most recent observation for each tier 1 beach as our test set. We will then use our model to predict the number of days under beach action for the test set, which will give us some insight into our model's predictive accuracy using metrics such as the mean square error.
 
 ## Measuring Pollution
 
@@ -340,81 +339,120 @@ states_comms <- local_action_decision_procedures %>%
 
 ## Measuring Risk
 
-Below one can find the results from the zero-inflated negative binomial model which predicts the numnber of days under beach action using features related to beach attributes.
+Below one can find the results from the zero-inflated negative binomial model which predicts the number of days under beach action using features related to beach attributes.
 
 ```{r, fig.align='center'}
 #m_pois <- glm(no_of_days_under_beach_action ~ . -year -beach_id, risk, family = "poisson")
 #summary(m_pois)
 #dispersiontest(m_pois) #over-dispersion is present
 
-labels <- c("Intercept", "Beach Length (mi)", "Water Body (Chesapeake Bay)", "Water Body (Gulf of Mexico)",
-                  "Water Body (Inland)", "Water Body (Lake Erie)", "Water Body (Lake Huron)", 
-                  "Water Body (Lake Michigan)", "Water Body (Lake Ontario)", "Water Body (Lake Superior)", "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Swim Status (No advisory or closure)",  "Beach Access (Public)",  "Beach Owner (Public)", "Swim Season (day)")
+risk <- risk %>%
+  filter(waterbody_name != "Inland")%>%
+  mutate(waterbody_name = case_when(
+    waterbody_name == "Chesapeake Bay" ~ "Atlantic Ocean",
+    waterbody_name %in% c("Lake Erie", "Lake Huron", "Lake Michigan", "Lake Ontario", "Lake Superior") ~ "Great Lakes",
+    TRUE ~ as.character(waterbody_name)
+  )) %>%
+  ungroup() %>%
+  select(-beach_id)
+  
+labels <- c("Intercept", "Beach Length (mi)", "Water Body (Chesapeake Bay)", "Great Lakes", "Water Body (Gulf of Mexico)",
+                  "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Swim Status (No advisory or closure)",  "Beach Owner (Public)", "Swim Season (day)", "Intercept", "Beach Length (mi)", "Water Body (Chesapeake Bay)", "Great Lakes", "Water Body (Gulf of Mexico)",
+                  "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Swim Status (No advisory or closure)",  "Beach Owner (Public)", "Swim Season (day)")
 
-m<- glm.nb(no_of_days_under_beach_action ~ . -year -beach_id-water_type-waterbody_type, risk)
+mod_names = c("count_(Intercept)", "count_beach_length_mi", "count_waterbody_nameChesapeakeBay", "count_waterbody_nameGreat Lakes", "count_waterbody_nameGulf of Mexico", "count_waterbody_nameLong Island Sound", "count_waterbody_namePacific Ocean", "count_swim_statusNo advisory or closure", "count_beach_ownerPublic", "count_swim_season_beach_days",
+              "zero_(Intercept)", "zero_beach_length_mi", "zero_waterbody_nameChesapeakeBay", "zero_waterbody_nameGreat Lakes", "zero_waterbody_nameGulf of Mexico", "zero_waterbody_nameLong Island Sound", "zero_waterbody_namePacific Ocean", "zero_swim_statusNo advisory or closure", "zero_beach_ownerPublic", "zero_swim_season_beach_days")
 
-m2 <- zeroinfl(no_of_days_under_beach_action ~ . -year -beach_id -water_type-waterbody_type, risk, dist="negbin")
-tab_model(m2, digits = 4, show.zeroinf = T,
-          pred.labels = c(labels, labels),
+m<- glm.nb(no_of_days_under_beach_action ~ . -year -water_type-waterbody_type-beach_access-swim_status, risk)
+
+m2 <- zeroinfl(no_of_days_under_beach_action ~ . -year  -water_type-waterbody_type-beach_access-swim_status, risk, dist="negbin")
+tab_model(m2, digits = 4, auto.label = F,
           dv.labels = "Number of Days Under Beach Action"
 )
+```
+
+As prediction is also a motive for this research question, below we investigate this model's ability to predict the number of days under beach action for both the training and test data.
+
+```{r data-wrangling-test, fig.width=8, fig.height=4}
+ba_t <- beach_attributes %>%
+  filter(beach_id %in% test_set) %>%
+  dplyr::select(year, beach_id, beach_length_mi) %>%
+  mutate(beach_length_mi = ifelse(beach_length_mi == "-", NA_character_, beach_length_mi)) %>%
+  fill(beach_length_mi) %>%
+  mutate(beach_length_mi = as.numeric(beach_length_mi))
+
+bp_t <- beach_profile %>%
+  filter(beach_id %in% test_set) %>%
+  dplyr::select(year, beach_id, waterbody_name, waterbody_type, swim_status, beach_access, beach_owner) %>%
+  mutate(beach_access = ifelse(beach_access == "null", NA_character_, beach_access),
+         beach_owner = ifelse(beach_owner == "-", NA_character_, beach_owner),
+         waterbody_name = ifelse(waterbody_name == "-", NA_character_, waterbody_name),
+         waterbody_type = ifelse(waterbody_type == "-", NA_character_, waterbody_type))
+
+watertype_t <-  beach_wqs_criteria_names_and_values %>%
+  filter(beach_id %in% test_set) %>%
+  dplyr::select(year, beach_id, water_type)
+
+t1stats_t <- tier_1_stats %>%
+  filter(beach_id %in% test_set) %>%
+  dplyr::select(year, beach_id, no_of_days_under_beach_action, swim_season_beach_days)
+
+risk1_t <- inner_join(ba_t, bp_t)
+risk2_t <- inner_join(risk1_t, watertype_t)
+risk_t <- inner_join(risk2_t, t1stats_t) %>%
+  filter(no_of_days_under_beach_action < 365) %>%
+  group_by(beach_id) %>%
+  slice(which.max(year)) %>%
+  ungroup() %>%
+  filter(waterbody_name != "Inland")%>%
+  mutate(waterbody_name = case_when(
+    waterbody_name %in% c("Lake Erie", "Lake Huron", "Lake Michigan", "Lake Ontario", "Lake Superior") ~ "Great Lakes",
+    waterbody_name == "Chesapeake Bay" ~ "Atlantic Ocean",
+    TRUE ~ as.character(waterbody_name)
+  ))
+
+train_preds <- predict(m2, type="response", na.action=na.pass)
+train_true <- risk$no_of_days_under_beach_action
+pred_lab_train <- rep("Predicted",length(train_preds))
+true_lab_train<- rep("True", length(train_true))
+lab_train <- c(pred_lab_train, true_lab_train)
+vals_train = c(train_preds, train_true)
+train_rmse <- mean((train_true - train_preds) ^ 2)
+
+test_preds <- predict(m2, risk_t, type = "response", na.action = na.pass)
+test_true <- risk_t$no_of_days_under_beach_action
+pred_lab_test <- rep("Predicted", length(test_preds))
+true_lab_test<- rep("True", length(test_true))
+lab_test <- c(pred_lab_test, true_lab_test)
+test_rmse <- mean((test_true - test_preds) ^ 2)
+vals_test <- c(test_preds, test_true)
+
+train_vals <- data_frame(vals_train, lab_train)
+test_vals <- data_frame(vals_test, lab_test)
+
+plot1 <- ggplot() + 
+  geom_histogram(data=train_vals, aes(x=vals_train,  fill=lab_train), alpha=0.5) + 
+  theme_minimal()+
+  labs(title="Training Set", x = "No. Days Under Beach Action",
+       y="Number of Beaches", fill="Value")
+
+plot2 <- ggplot() + 
+  geom_histogram(data=test_vals, aes(x=vals_test,  fill=lab_test), alpha=0.5) + 
+  theme_minimal()+
+  labs(title="Testing Set", x = "No. Days Under Beach Action",
+       y="Number of Beaches", fill="Value")
+
+(plot1 + plot2)  + plot_annotation(tag_levels = 'A', title = "Evaluating Zero-Inf. NB Model's Predictive Accuracy")+ 
+  plot_layout(guides = 'collect')
 
 ```
+
+While inference is the main goal of this model, it is informative to have some information about how well this model predicts how many days a beach will be under action. Using this model, the test RMSE is `r round(test_rmse, 3)`, which is more than the train RMSE, which is `r round(train_rmse,3)`. As a result, it appears like our model may be overfitting. We will explore the discrepancies between the fitted and true values in the Discussion.
 
 ## Measuring Pollution
 
-$$
-\begin{aligned}
-Y_{ij} = (\gamma_{00}+u_{0j})&+\gamma_{10}\text{Beach Length}_{ij} + \gamma_{20}I(\text{Beach Access}_{ij} = \text{Public}) + \gamma_{30}I(\text{Beach Owner}_{ij} = \text{Public}) \\
-&+ \gamma_{40}\text{Swim Season Beach Days}_{ij} + \gamma_{50}I(\text{Action Type}_{ij} = \text{Contamination Advisory})\\
-&+\gamma_{60}I(\text{Action Type}_{ij} = \text{Permanent Closure}) + \gamma_{70}I(\text{Action Type}_{ij} = \text{Posing}) \\
-&= \gamma_{80}I(\text{Action Type}_{ij} = \text{Rain Advisory})
-\end{aligned}
-$$
+Unfortunately, the results for this section are inconclusive. After we aggregated the number of pollutants for the beaches in our sample over a five year period, it appeared that the range for the number of pollutant was between 5 and 10, with the vast majority of beaches only having 5 pollutants. Therefore, the proposed linear mixed model and other traditional modeling techniques are not appropriate for this research question using the data at hand. In the Discussion section, we suggest ways to collect data which could better address our goal of measuring pollution across US beaches using our proposed methods.
 
-```{r}
-beach_actions_tier1 <-beach_actions %>%
-  filter(beach_id %in% beaches) %>%
-  mutate(no_pollutants = case_when(
-    action_reasons == "-" ~ NA_integer_,
-    TRUE ~ lengths(strsplit(action_reasons, ", "))
-  ))
-  
-risk3 <- inner_join(risk2, t1stats)
-
-risk3 <- risk3 %>%
-  group_by(beach_id)%>%
-  slice(which.max(year))
-
-pollution <- beach_actions_tier1 %>%
-  group_by(beach_id) %>% 
-  arrange(desc(year)) %>% 
-  slice(1:5)
- 
-pollution <- pollution %>%
-  group_by(beach_id)%>%
-  summarise(no_pollutants5 = sum(no_pollutants), obs=n()) %>%
-  filter(obs>=5) %>%
-  inner_join(risk3) %>%
-  filter(!is.na(waterbody_name))
-
-ggplot(pollution, aes(x=no_pollutants5)) +
-  geom_histogram()
-```
-
-```{r}
-lmm <- lmer(no_pollutants5 ~  beach_length_mi + beach_access + beach_owner + swim_season_beach_days  + (1|waterbody_name), data = pollution)
-summary(lmm)
-```
-```{r}
-print(paste0("LMM waterbody name accounts for ", round(0.5871*100/(0.5871+1.66), 2), "% of total variance"))
-```
-
-```{r}
-plot(lmm)
-qqnorm(resid(lmm))
-qqline(resid(lmm))
-```
 ## How States Communicate with Citizens about Their Beaches
 
 Below, one can observe how beaches in each state communicate with residents along with the environmental literacy ratings for each state. To change the method of communication, use the drop-down input to select the desired output.
@@ -512,7 +550,7 @@ server <- function(input, output) {
         geom_polygon(color = "black", size = 0.1)+
         geom_point(data=environmental_literacy, aes(x=longitude, y=latitude, size = rating), color="black", inherit.aes = FALSE) +
         guides(size=guide_legend("Environmental Literacy Rating")) +
-        scale_fill_gradientn(colours = rev(terrain.colors(10)), na.value = "lightgrey") +
+        scale_fill_gradientn(colours = c("lightpink", "lightgreen"), na.value = "lightgrey") +
         theme(strip.background = element_blank()) +
         theme_map(base_size = 12) + 
         labs(fill = "Percent of Beaches Using this Method of Communication") +
@@ -525,43 +563,12 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server, options = list(height = 800))
-
-
 ```
 
 # Discussion
 
-```{r, fig.align='center', include=T}
-# check what the underlying count distribution is
-Ord_plot(risk$no_of_days_under_beach_action)
+# Appendix
 
-# check which variables are significant in an ANOVA test
-anova(m, test="Chisq")
-
-# check which points are more influential
-car::influencePlot(m)
-
-# check for multicollinearity
-car::vif(m)
-
-# check if zero-inflated or non-zero-inflated model is better
-AIC(m, m2)
-
-# plot residuals
-resids <- simulateResiduals(m, integerResponse=T)
-plot(resids)
-
-#outliers
-outliers <- outliers(resids)
-
-# test for zero-inflation
-testZeroInflation(resids)
-```
-
-```{r}
-# check what the underlying count distribution is
-Ord_plot(pollution$no_pollutants5)
-```
 # References
 
 - [1] [National Ocean Service](https://aambpublicoceanservice.blob.core.windows.net/oceanserviceprod/about/nos_brochure.pdf)
@@ -569,5 +576,3 @@ Ord_plot(pollution$no_pollutants5)
 - [3] BEACON Data Source and Information: [BEACON 2.0](https://watersgeo.epa.gov/beacon2/)
 - [4] University of Tennessee - Knoxville Data Source: [Ruggiero, Karena. "A Criteria-Based Evaluation of Environmental Literacy Plans in the
 United States"](https://trace.tennessee.edu/cgi/viewcontent.cgi?article=5129&context=utk_graddiss)
-
-# Appendix
