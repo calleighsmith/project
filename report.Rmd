@@ -259,11 +259,11 @@ ggplot(eda_methods, aes(x = methods, y = methods_yes)) +
 
 ## Measuring Risk Factors
 
-For this research question, the main goal is to predict the number of days under beach action for Tier 1 beaches in our random sample.  We will mainly consider features related to the physical characteristics of the beach. These features include the beach length, whether the beach is privately owned, whether the beach is accessible to the public, the water body and type of water body that the beach belongs to, the swim status of the beach, swim season length, the water type of the beach (i.e. marine or freshwater), and the number of days in the swim season. We will use the most recent observation from our random sample of Tier 1 Beaches ($n$ = 386).
+For this research question, the main goal is to predict the number of days under beach action for Tier 1 beaches in our random sample.  We will mainly consider features related to the physical characteristics of the beach. These features include the beach length, whether the beach is privately owned, whether the beach is accessible to the public, the water body and type of water body that the beach belongs to, the swim status of the beach, swim season length, the water type of the beach (i.e. marine or freshwater), and the number of days in the swim season. We will use the most recent observation from our random sample of Tier 1 Beaches ($n$ = 547).
 
 Upon inspection, it appears that there are several outliers in the data, specifically, beaches where there are many days in a year under beach action. We did not think it would be wise to remove these outliers, as it is meaningful to be able to predict the number of days under beach action for these extreme cases.
 
-Our response variable, number of days under beach action, is a discrete count which is also highly skewed right. Since over-dispersion appeared to be an issue, a Poisson model was deemed to not be ideal. However, a Negative Binomial (NB) model, which is often used instead of a Poisson model to deal with the issue of over-dispersion, appeared to be a worthy alternative.  Additionally, our outcome is zero-inflated, as confirmed by a zero inflation test on the residuals, and there is evidence of over-dispersion. To test for this, we performed an ANOVA test using AIC as the criterion to decipher whether a zero-inflated NB model or a regular NB model performed better, and the zero-inflated NB model had a lower AIC.  Therefore, in order to model the number of days under beach action, we will use a zero-inflated Negative Binomial model. 
+Our response variable, number of days under beach action, is a discrete count which is also highly skewed right. Since over-dispersion appeared to be an issue, a Poisson model was deemed to not be ideal. However, a Negative Binomial (NB) model, which is often used instead of a Poisson model to deal with the issue of over-dispersion, appeared to be a worthy alternative.  Additionally, our outcome is zero-inflated, as confirmed by a zero inflation test on the residuals, and there is evidence of over-dispersion. To test for this, we performed an ANOVA test using AIC as the criterion to decipher whether a zero-inflated NB model or a regular NB model performed better, and the zero-inflated NB model had a lower AIC.  However, after validating the fit of the zero-inflated model on the training and test data, it appeared that this model did not fit well for beaches on the Pacific Ocean, which constitute many of the beaches in our data. Therefore, we decided to use the normal negative-binomial model that is not zero-inflated.
 
 Our outcome, number of days under beach action, follows a NB distribution. We confirmed this by creating an ord plot, which helps in identifying which count data model is underlying, and obtained a positive slope and intercept indicative of a negative binomial distribution. Upon inspection of the residual plots, specifically the QQ plot of the deviance residuals and the plot of the residuals vs. fitted values, the model assumptions appear satisfactory.
 
@@ -338,7 +338,7 @@ states_comms <- local_action_decision_procedures %>%
 
 ## Measuring Risk
 
-Below one can find the results from the zero-inflated negative binomial model which predicts the number of days under beach action using features related to beach attributes.
+Below one can find the results from the negative binomial model which predicts the number of days under beach action using features related to beach attributes.
 
 ```{r, fig.align='center'}
 #m_pois <- glm(no_of_days_under_beach_action ~ . -year -beach_id, risk, family = "poisson")
@@ -356,14 +356,13 @@ risk <- risk %>%
   select(-beach_id)
   
 labels <- c("Intercept", "Beach Length (mi)", "Water Body (Great Lakes)", "Water Body (Gulf of Mexico)",
-                  "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Beach Owner (Public)", "Swim Season (day)", "Intercept", "Beach Length (mi)", "Water Body (Great Lakes)", "Water Body (Gulf of Mexico)",
                   "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Beach Owner (Public)", "Swim Season (day)")
 
 m<- glm.nb(no_of_days_under_beach_action ~ . -year -water_type-waterbody_type-beach_access-swim_status, risk)
 
 m2 <- zeroinfl(no_of_days_under_beach_action ~ . -year  -water_type-waterbody_type-beach_access-swim_status, risk, dist="negbin")
 tab_model(m2, digits = 4, auto.label = F,
-          pred.labels = labels,
+          pred.labels = labels, show.zeroinf = F, 
           dv.labels = "Number of Days Under Beach Action"
 )
 ```
@@ -408,7 +407,7 @@ risk_t <- inner_join(risk2_t, t1stats_t) %>%
     TRUE ~ as.character(waterbody_name)
   ))
 
-train_preds <- predict(m2, type="response", na.action=na.pass)
+train_preds <- predict(m, type="response", na.action=na.pass)
 risk <- cbind(risk, train_preds)
 train_true <- risk$no_of_days_under_beach_action
 pred_lab_train <- rep("Predicted",length(train_preds))
@@ -417,7 +416,7 @@ lab_train <- c(pred_lab_train, true_lab_train)
 vals_train = c(train_preds, train_true)
 train_rmse <- mean((train_true - train_preds) ^ 2)
 
-test_preds <- predict(m2, risk_t, type = "response", na.action = na.pass)
+test_preds <- predict(m, risk_t, type = "response", na.action = na.pass)
 test_true <- risk_t$no_of_days_under_beach_action
 risk_t <- cbind(risk_t, test_preds)
 pred_lab_test <- rep("Predicted", length(test_preds))
@@ -441,7 +440,7 @@ plot2 <- ggplot() +
   labs(title="Testing Set", x = "No. Days Under Beach Action",
        y="Number of Beaches", fill="Value")
 
-(plot1 + plot2)  + plot_annotation(tag_levels = 'A', title = "Evaluating Zero-Inf. NB Model's Predictive Accuracy")+ 
+(plot1 + plot2)  + plot_annotation(tag_levels = 'A', title = "Evaluating NB Model's Predictive Accuracy")+ 
   plot_layout(guides = 'collect')
 
 ```
@@ -542,7 +541,6 @@ ui <- fluidPage(
 states_comms$region <- stateFromLower(states_comms$state_code)
 us_states_elec <- left_join(us, states_comms)
 
-
 server <- function(input, output) {
   observe({
 
@@ -552,7 +550,7 @@ server <- function(input, output) {
           geom_polygon(color = "black", size = 0.1)+
           geom_point(data=environmental_literacy, aes(x=longitude, y=latitude, size = rating), color="black", inherit.aes = FALSE) +
           guides(size=guide_legend("Environmental Literacy Rating")) +
-          scale_fill_gradientn(colours = c("lightpink", "lightgreen"), na.value = "lightgrey") +
+          scale_fill_gradientn(colors = rev(terrain.colors(5))[2:5], na.value = "lightgrey") +
           theme(strip.background = element_blank()) +
           theme_map(base_size = 12) + 
           labs(fill = "Percent of Beaches Using this Method of Communication") +
@@ -563,7 +561,7 @@ server <- function(input, output) {
         renderGirafe({
       p<- (ggplot(data=us_states_elec, aes_string(x="long", y="lat", group="group", fill=input$method)) +
         geom_polygon(color = "black", size = 0.1)+
-        scale_fill_gradientn(colours = c("lightpink", "lightgreen"), na.value = "lightgrey") +
+        scale_fill_gradientn(colours = rev(terrain.colors(5))[2:5], na.value = "lightgrey") +
         theme(strip.background = element_blank()) +
         theme_map(base_size = 12) + 
         labs(fill = "Percent of Beaches Using this Method of Communication") +
@@ -580,6 +578,80 @@ shinyApp(ui = ui, server = server, options = list(height = 800))
 # Discussion
 
 # Appendix
+
+```{r, fig.align='center', include=F}
+# check what the underlying count distribution is
+Ord_plot(risk$no_of_days_under_beach_action)
+
+# check which variables are significant in an ANOVA test
+anova(m, test="Chisq")
+
+# check which points are more influential
+car::influencePlot(m)
+  
+  
+# check for multicollinearity
+car::vif(m)
+  
+# check if zero-inflated or non-zero-inflated model is better
+AIC(m, m2)
+
+# plot residuals
+resids <- simulateResiduals(m, integerResponse=T)
+plot(resids)
+
+#outliers
+outliers <- outliers(resids)
+
+# test for zero-inflation
+testZeroInflation(resids)
+```
+
+```{r, include=F}
+beach_actions_tier1 <-beach_actions %>%
+  filter(beach_id %in% beaches) %>%
+  mutate(no_pollutants = case_when(
+    action_reasons == "-" ~ NA_integer_,
+    TRUE ~ lengths(strsplit(action_reasons, ", "))
+  ))
+
+risk3 <- inner_join(risk2, t1stats)
+
+risk3 <- risk3 %>%
+  group_by(beach_id)%>%
+  slice(which.max(year))
+
+pollution <- beach_actions_tier1 %>%
+  group_by(beach_id) %>% 
+  arrange(desc(year)) %>% 
+  slice(1:5)
+
+pollution <- pollution %>%
+  group_by(beach_id)%>%
+  summarise(no_pollutants5 = sum(no_pollutants), obs=n()) %>%
+  filter(obs>=5) %>%
+  inner_join(risk3) %>%
+  filter(!is.na(waterbody_name))
+
+ggplot(pollution, aes(x=no_pollutants5)) +
+  geom_histogram()
+```
+
+```{r, include=F}
+lmm <- lmer(no_pollutants5 ~  beach_length_mi + beach_access + beach_owner + swim_season_beach_days  + (1|waterbody_name), data = pollution)
+summary(lmm)
+```
+
+```{r, include=F}
+print(paste0("LMM waterbody name accounts for ", round(0.5871*100/(0.5871+1.66), 2), "% of total variance"))
+```
+
+```{r, include=F}
+plot(lmm)
+qqnorm(resid(lmm))
+qqline(resid(lmm))
+```
+
 
 # References
 
