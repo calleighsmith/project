@@ -68,12 +68,13 @@ water_quality_report <- read_csv("data/water_quality_report.csv") %>%
 ```
 
 ```{r,include=F}
+set.seed(440)
 tier_1_beach_ids <- tier_1_stats$beach_id
 beaches <- beach_profile %>%
   filter(beach_id %in% tier_1_beach_ids,
          year == 2020)
 
-beaches <- stratified(beaches, 7,.5) %>%
+beaches <- stratified(beaches, c("waterbody_name", "beach_owner"),.7) %>%
   pull(beach_id)
 
 test_set <- setdiff(tier_1_beach_ids, beaches)
@@ -130,7 +131,7 @@ Our data were obtained through the Environmental Protection Agency (EPA) as part
 
 The BEACON 2.0 online tool provides many reports on all beaches in the United States. Available datasets include those related to each action for a beach, beach attributes and profiles, beach days, beach monitoring frequency, possible pollution sources, water quality, tier 1 beach information state summaries, and more. Using BEACON 2.0's user guide found [here](https://www.epa.gov/sites/production/files/2014-08/documents/beacon_usersguide.pdf), one can view a full data dictionary, information on how to use the database, and basic summary statistics on some of the variables.
 
-In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 50% of the beaches from each water body where data were available from the year 2020, which results in about 1,070 beaches in this analysis.
+In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 70% of the beaches where data were available from the year 2020, stratifying by beach ownership (private/public) and body of water, which results in about 1,070 beaches in this analysis.
 
 For our first research question on measuring risk factors, we will look at the number of days under action in a given year for each beach as the response variable. Features we would like to consider include action reason, beach ownership (private/public), beach length, water body type, beach monitoring frequency, water quality, and number of swim days. For our second research question, we will look at states, names of body waters, possible pollution sources, and water quality standards. For our third research question, we will look at local action decision procedures, which includes how governing bodies communicated beach actions with residents, and the reason/severity of the beach action. 
 
@@ -258,7 +259,7 @@ ggplot(eda_methods, aes(x = methods, y = methods_yes)) +
 
 ## Measuring Risk Factors
 
-For this research question, the main goal is to predict the number of days under beach action for Tier 1 beaches in our random sample.  We will mainly consider features related to the physical characteristics of the beach. These features include the beach length, whether the beach is privately owned, whether the beach is accessible to the public, the water body and type of water body that the beach belongs to, the swim status of the beach, swim season length, the water type of the beach (i.e. marine or freshwater), and the number of days in the swim season. We will use the most recent observation from our random sample of Tier 1 Beaches ($n$ = 391).
+For this research question, the main goal is to predict the number of days under beach action for Tier 1 beaches in our random sample.  We will mainly consider features related to the physical characteristics of the beach. These features include the beach length, whether the beach is privately owned, whether the beach is accessible to the public, the water body and type of water body that the beach belongs to, the swim status of the beach, swim season length, the water type of the beach (i.e. marine or freshwater), and the number of days in the swim season. We will use the most recent observation from our random sample of Tier 1 Beaches ($n$ = 386).
 
 Upon inspection, it appears that there are several outliers in the data, specifically, beaches where there are many days in a year under beach action. We did not think it would be wise to remove these outliers, as it is meaningful to be able to predict the number of days under beach action for these extreme cases.
 
@@ -273,10 +274,9 @@ One consideration in approaching this research question was whether it was appro
 The full model specification is as follows:
 $$
 \begin{aligned}
-\mu_i = \text{exp}(\text{ln}(t_i) &+ \beta_0 + \beta_1\times \text{beach length}_i +\beta_2\times I(\text{water body name}_i = \text{Chesapeake Bay}) \\
-&+ \beta_3\times I(\text{water body name}_i = \text{Gulf of Mexico}) + \beta_4\times I(\text{water body name}_i = \text{Great Lakes}) \\
-&+ \beta_{5}\times I(\text{water body name}_i = \text{Long Island Sound}) + \beta_{6}\times I(\text{water body name}_i = \text{Pacific Ocean}) \\ &+  \beta_{7}\times I(\text{swim status}_i = \text{No Advisory or Closure})+
-\beta_{8}\times I(\text{beach owner}_i = \text{Public}) + \beta_{9}\times \text{days in swim season}_i).
+\mu_i = \text{exp}(\text{ln}(t_i) &+ \beta_0 + \beta_1\times \text{beach length}_i + \beta_2\times I(\text{water body name}_i = \text{Gulf of Mexico}) + \beta_3\times I(\text{water body name}_i = \text{Great Lakes}) \\
+&+ \beta_{4}\times I(\text{water body name}_i = \text{Long Island Sound}) + \beta_{5}\times I(\text{water body name}_i = \text{Pacific Ocean}) \\ &+  
+\beta_{6}\times I(\text{beach owner}_i = \text{Public}) + \beta_{7}\times \text{days in swim season}_i).
 \end{aligned}
 $$
 Using this notation, the fundamental negative binomial regression model for a beach $i$ is written as $$Pr(Y=y_i\mid\mu_i, \alpha) =\frac{\Gamma(y_i +\alpha^{-1})}{\Gamma(\alpha^{-1})\Gamma(y_i+1)}\left(\frac{1}{1+\alpha\mu_i}\right)^{\alpha^{-1}}\left(\frac{\alpha\mu_i}{1+\alpha\mu_i}\right)^{y_i}.$$
@@ -285,18 +285,17 @@ Finally, as prediction is a secondary goal of this analysis, we will create a te
 
 ## Measuring Pollution
 
-In this question, we will seek to better understand how pollution is distributed across US waters, such as in the Pacific Ocean, Atlantic Ocean, Gulf of Mexico, etc. Our response variable is the number of pollutants found at a given beach since 2015 (note that pollutants can repeat if they return the next year). Our main variable of interest will be water body name, but we will include other covariates from our first research question as controls in our model as well as the action type as a result of the pollution.
+In this question, we will seek to better understand how pollution is distributed across US waters, such as in the Pacific Ocean, Atlantic Ocean, Gulf of Mexico, etc. Our response variable is the number of pollutants found at a given beach since 2015 (note that pollutants can repeat if they return the next year). Our main variable of interest will be water body name, but we will include other covariates from our first research question as controls in our model.
 
 One issue with model fitting of this type is that the observations are not independent because pollutants at beaches within the same main body of water are likely correlated. Therefore, the independence assumption that most simple generalized linear models require to fit is violated.  One might consider an aggregated approach, where rather than considering the individual beaches in a body of water, we consider the average of all beaches within a body of water. While this aggregated approach would be independent, it would not take advantage of all of the data. In our dataset, there are 12 water bodies, so this aggregate approach would only consider 12 data points, which would result in very low power. Another approach would be to fit 12 separate models, one for the beaches in each body of water. However, this results in multiple regression models for each body of water and does not take advantage of the information in the data from other bodies of water. This can also add noise to the estimates in each model, as the models are not built off of that much data.
 
-One solution is to create a random intercepts linear mixed model (LMM). In our analysis, it is reasonable enough to assume that beaches in different bodies of water are not correlated (although this is not entirely true and will be discussed as a limitation later in the Discussion). LMMs depend on fixed and random effects. In our model, the fixed effects are the normal explanatory variables like in simple linear regression, and we will consider the fixed effects as covariates. The random effect is the variable that seeks to explain our grouping factor, which in our case is the body of water. The model assumptions for LMMs are similar to simple linear regression. There should be no patterns in the residuals vs. fitted plot and normality in the residuals. 
+One solution is to create a random intercepts linear mixed model (LMM). In our analysis, it is reasonable enough to assume that beaches in different bodies of water are not correlated. LMMs depend on fixed and random effects. In our model, the fixed effects are the normal explanatory variables like in simple linear regression, and we will consider the fixed effects as covariates. The random effect is the variable that seeks to explain our grouping factor, which in our case is the body of water. The model assumptions for LMMs are similar to simple linear regression. There should be no patterns in the residuals vs. fitted plot and normality in the residuals. 
 
 The full model specification is as follows for the $i$-th beach for the $j$-th body of water:
 
 $$
 \begin{aligned}
-Y_{ij} = (\gamma_{00}+u_{0j})&+\gamma_{10}\text{Beach Length}_{ij} + \gamma_{20}I(\text{Beach Access}_{ij} = \text{Public}) + \gamma_{30}I(\text{Beach Owner}_{ij} = \text{Public}) \\
-&+ \gamma_{40}\text{Swim Season Beach Days}_{ij} + \gamma_{50}I(\text{Action Type}_{ij} = \text{Contamination Advisory})\\
+Y_{ij} = (\gamma_{00}+u_{0j})&+\gamma_{10}\text{Beach Length}_{ij} + \gamma_{30}I(\text{Beach Owner}_{ij} = \text{Public}) + \gamma_{40}\text{Swim Season Beach Days}_{ij} \\
 &+\gamma_{60}I(\text{Action Type}_{ij} = \text{Permanent Closure}) + \gamma_{70}I(\text{Action Type}_{ij} = \text{Posing}) \\
 &= \gamma_{80}I(\text{Action Type}_{ij} = \text{Rain Advisory})
 \end{aligned}
@@ -356,17 +355,15 @@ risk <- risk %>%
   ungroup() %>%
   select(-beach_id)
   
-labels <- c("Intercept", "Beach Length (mi)", "Water Body (Chesapeake Bay)", "Great Lakes", "Water Body (Gulf of Mexico)",
-                  "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Swim Status (No advisory or closure)",  "Beach Owner (Public)", "Swim Season (day)", "Intercept", "Beach Length (mi)", "Water Body (Chesapeake Bay)", "Great Lakes", "Water Body (Gulf of Mexico)",
-                  "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Swim Status (No advisory or closure)",  "Beach Owner (Public)", "Swim Season (day)")
-
-mod_names = c("count_(Intercept)", "count_beach_length_mi", "count_waterbody_nameChesapeakeBay", "count_waterbody_nameGreat Lakes", "count_waterbody_nameGulf of Mexico", "count_waterbody_nameLong Island Sound", "count_waterbody_namePacific Ocean", "count_swim_statusNo advisory or closure", "count_beach_ownerPublic", "count_swim_season_beach_days",
-              "zero_(Intercept)", "zero_beach_length_mi", "zero_waterbody_nameChesapeakeBay", "zero_waterbody_nameGreat Lakes", "zero_waterbody_nameGulf of Mexico", "zero_waterbody_nameLong Island Sound", "zero_waterbody_namePacific Ocean", "zero_swim_statusNo advisory or closure", "zero_beach_ownerPublic", "zero_swim_season_beach_days")
+labels <- c("Intercept", "Beach Length (mi)", "Water Body (Great Lakes)", "Water Body (Gulf of Mexico)",
+                  "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Beach Owner (Public)", "Swim Season (day)", "Intercept", "Beach Length (mi)", "Water Body (Great Lakes)", "Water Body (Gulf of Mexico)",
+                  "Water Body (Long Island Sound)", "Water Body (Pacific Ocean)", "Beach Owner (Public)", "Swim Season (day)")
 
 m<- glm.nb(no_of_days_under_beach_action ~ . -year -water_type-waterbody_type-beach_access-swim_status, risk)
 
 m2 <- zeroinfl(no_of_days_under_beach_action ~ . -year  -water_type-waterbody_type-beach_access-swim_status, risk, dist="negbin")
 tab_model(m2, digits = 4, auto.label = F,
+          pred.labels = labels,
           dv.labels = "Number of Days Under Beach Action"
 )
 ```
@@ -412,6 +409,7 @@ risk_t <- inner_join(risk2_t, t1stats_t) %>%
   ))
 
 train_preds <- predict(m2, type="response", na.action=na.pass)
+risk <- cbind(risk, train_preds)
 train_true <- risk$no_of_days_under_beach_action
 pred_lab_train <- rep("Predicted",length(train_preds))
 true_lab_train<- rep("True", length(train_true))
@@ -421,6 +419,7 @@ train_rmse <- mean((train_true - train_preds) ^ 2)
 
 test_preds <- predict(m2, risk_t, type = "response", na.action = na.pass)
 test_true <- risk_t$no_of_days_under_beach_action
+risk_t <- cbind(risk_t, test_preds)
 pred_lab_test <- rep("Predicted", length(test_preds))
 true_lab_test<- rep("True", length(test_true))
 lab_test <- c(pred_lab_test, true_lab_test)
@@ -533,6 +532,7 @@ ui <- fluidPage(
                   "Sent to Phone List" = "prob_phone",
                   "Results on Request" = "prob_request",
                   "Other" = "prob_other")),
+    radioButtons("enviro_lit", "View Environmental Literacy Ratings?", c("Yes" = "yes", "No" ="no"), selected="yes"),
     girafeOutput("distPlot", width="800px", height="600px"),
   )
         
@@ -544,22 +544,34 @@ us_states_elec <- left_join(us, states_comms)
 
 
 server <- function(input, output) {
+  observe({
 
-    output$distPlot <- renderGirafe({
-      p <- (ggplot(data=us_states_elec, aes_string(x="long", y="lat", group="group", fill=input$method)) +
+      output$distPlot <- if(input$enviro_lit == "yes"){
+        renderGirafe({
+        p<-(ggplot(data=us_states_elec, aes_string(x="long", y="lat", group="group", fill=input$method)) +
+          geom_polygon(color = "black", size = 0.1)+
+          geom_point(data=environmental_literacy, aes(x=longitude, y=latitude, size = rating), color="black", inherit.aes = FALSE) +
+          guides(size=guide_legend("Environmental Literacy Rating")) +
+          scale_fill_gradientn(colours = c("lightpink", "lightgreen"), na.value = "lightgrey") +
+          theme(strip.background = element_blank()) +
+          theme_map(base_size = 12) + 
+          labs(fill = "Percent of Beaches Using this Method of Communication") +
+          theme(legend.position="bottom", legend.box="vertical", legend.margin=margin(), legend.justification = "center"))
+          girafe(code=print(p))
+        })}
+      else{
+        renderGirafe({
+      p<- (ggplot(data=us_states_elec, aes_string(x="long", y="lat", group="group", fill=input$method)) +
         geom_polygon(color = "black", size = 0.1)+
-        geom_point(data=environmental_literacy, aes(x=longitude, y=latitude, size = rating), color="black", inherit.aes = FALSE) +
-        guides(size=guide_legend("Environmental Literacy Rating")) +
         scale_fill_gradientn(colours = c("lightpink", "lightgreen"), na.value = "lightgrey") +
         theme(strip.background = element_blank()) +
         theme_map(base_size = 12) + 
         labs(fill = "Percent of Beaches Using this Method of Communication") +
         theme(legend.position="bottom", legend.box="vertical", legend.margin=margin(), legend.justification = "center"))
-      
-      girafe(code = print(p))
-
-    })
-}
+          girafe(code=print(p))
+      })
+      }
+  })}
 
 # Run the application 
 shinyApp(ui = ui, server = server, options = list(height = 800))
