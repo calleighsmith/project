@@ -10,7 +10,7 @@ output:
 runtime: shiny
 ---
 
-```{r setup, include=FALSE}
+```{r setup-and-packages, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message=F, warning=F)
 library(MASS)
 library(tidyverse)
@@ -37,9 +37,10 @@ library(ggplot2)
 library(ggthemes)
 library(dplyr)
 library(ggiraph)
+library(qgam)
 ```
 
-```{r, message = F, error=F, include=F}
+```{r load-data, message = F, error=F, include=F}
 action_duration <- read_csv("data/action_duration.csv") %>%
   clean_names() %>%
   dplyr::select(1:7)
@@ -69,14 +70,20 @@ water_quality_report <- read_csv("data/water_quality_report.csv") %>%
 
 ```{r,include=F}
 set.seed(440)
+
+# obtain tier 1 beaches
 tier_1_beach_ids <- tier_1_stats$beach_id
+
+# filter tier 1 beaches so they have current data available
 beaches <- beach_profile %>%
   filter(beach_id %in% tier_1_beach_ids,
          year == 2020)
 
+# take stratified random sample
 beaches <- stratified(beaches, c("waterbody_name", "beach_owner"),.7) %>%
   pull(beach_id)
 
+# define test set beaches
 test_set <- setdiff(tier_1_beach_ids, beaches)
 ```
 
@@ -131,9 +138,9 @@ Our data were obtained through the Environmental Protection Agency (EPA) as part
 
 The BEACON 2.0 online tool provides many reports on all beaches in the United States. Available datasets include those related to each action for a beach, beach attributes and profiles, beach days, beach monitoring frequency, possible pollution sources, water quality, tier 1 beach information state summaries, and more. Using BEACON 2.0's user guide found [here](https://www.epa.gov/sites/production/files/2014-08/documents/beacon_usersguide.pdf), one can view a full data dictionary, information on how to use the database, and basic summary statistics on some of the variables.
 
-In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 70% of the beaches where data were available from the year 2020, stratifying by beach ownership (private/public) and body of water, which results in about 1,070 beaches in this analysis.
+In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 70% of the beaches where data were available from the year 2020, stratifying by beach ownership (private/public) and body of water, which results in about 1,497 beaches in this analysis.
 
-For our first research question on measuring risk factors, we will look at the number of days under action in a given year for each beach as the response variable. Features we would like to consider include action reason, beach ownership (private/public), beach length, water body type, beach monitoring frequency, water quality, and number of swim days. For our second research question, we will look at states, names of body waters, possible pollution sources, and water quality standards. For our third research question, we will look at local action decision procedures, which includes how governing bodies communicated beach actions with residents, and the reason/severity of the beach action. 
+For our first research question on measuring risk factors, we will look at the number of days under action in a given year for each beach as the response variable. Features we would like to consider include beach ownership (private/public), beach length, water body type, and number of swim days. For our second research question, our outcome variable is the number of pollutants present at a given beach over a 5 year period, and we consider the same features as the first research question. For our third research question, we will look at local action decision procedures, which include how governing bodies communicated beach advisories and closings to residents. Note that rather than just using Tier 1 beaches for this question, we will consider all beaches which have information about local action decision procedures.
 
 Additionally, we will use data from a supplemental source, "A Criteria-Based Evaluation of Environmental Literacy Plans in the United States," a dissertation by Karena Ruddiero at the University of Tennessee - Knoxville (2016) [4], which includes a dataset of all U.S. states and a score of the environmental literacy for that state based on several factors, including the integration of environmental literacy in current state curricula, graduation requirements for environmental literacy, and political status. Combining local action decision procedures for beach actions and a state's environmental literacy score will provide a more complete picture of government transparency when it comes to marine health and the public.
 
@@ -259,15 +266,13 @@ ggplot(eda_methods, aes(x = methods, y = methods_yes)) +
 
 ## Measuring Risk Factors
 
-For this research question, the main goal is to predict the number of days under beach action for Tier 1 beaches in our random sample.  We will mainly consider features related to the physical characteristics of the beach. These features include the beach length, whether the beach is privately owned, whether the beach is accessible to the public, the water body and type of water body that the beach belongs to, the swim status of the beach, swim season length, the water type of the beach (i.e. marine or freshwater), and the number of days in the swim season. We will use the most recent observation from our random sample of Tier 1 Beaches ($n$ = 547).
+For this research question, the main goal is to predict the number of days under beach action for Tier 1 beaches in our random sample.  We will mainly consider features related to the physical characteristics of the beach. These features include the beach length, whether the beach is privately owned, the water body and type of water body that the beach belongs to, swim season length, the water type of the beach (i.e. marine or freshwater), and the number of days in the swim season. We will use the most recent observation from our random sample of Tier 1 Beaches ($n$ = 547).
 
 Upon inspection, it appears that there are several outliers in the data, specifically, beaches where there are many days in a year under beach action. We did not think it would be wise to remove these outliers, as it is meaningful to be able to predict the number of days under beach action for these extreme cases.
 
-Our response variable, number of days under beach action, is a discrete count which is also highly skewed right. Since over-dispersion appeared to be an issue, a Poisson model was deemed to not be ideal. However, a Negative Binomial (NB) model, which is often used instead of a Poisson model to deal with the issue of over-dispersion, appeared to be a worthy alternative.  Additionally, our outcome is zero-inflated, as confirmed by a zero inflation test on the residuals, and there is evidence of over-dispersion. To test for this, we performed an ANOVA test using AIC as the criterion to decipher whether a zero-inflated NB model or a regular NB model performed better, and the zero-inflated NB model had a lower AIC.  However, after validating the fit of the zero-inflated model on the training and test data, it appeared that this model did not fit well for beaches on the Pacific Ocean, which constitute many of the beaches in our data. Therefore, we decided to use the normal negative-binomial model that is not zero-inflated.
+Our response variable, number of days under beach action, is a discrete count which is also highly skewed right. Since over-dispersion appeared to be an issue, a Poisson model was deemed to not be ideal. However, a Negative Binomial (NB) model, which is often used instead of a Poisson model to deal with the issue of over-dispersion, appeared to be a worthy alternative.  Additionally, our outcome is zero-inflated, as confirmed by a zero inflation test on the residuals, and there is evidence of over-dispersion. To test for this, we performed an ANOVA test using AIC as the criterion to decipher whether a zero-inflated NB model or a regular NB model performed better, and the zero-inflated NB model had a lower AIC.  However, after validating the fit of the zero-inflated model on the training and test data, it appeared that this model did not fit well for beaches situated on the Pacific Ocean, which constitute a substantial proportion of the beaches in our data. Therefore, we decided to use the regular negative-binomial model that is not zero-inflated.
 
-Our outcome, number of days under beach action, follows a NB distribution. We confirmed this by creating an ord plot, which helps in identifying which count data model is underlying, and obtained a positive slope and intercept indicative of a negative binomial distribution. Upon inspection of the residual plots, specifically the QQ plot of the deviance residuals and the plot of the residuals vs. fitted values, the model assumptions appear satisfactory.
-
-In fitting our zero-inflated Negative Binomial model, we ran into the issue of collinearity among the predictors. Using VIF, we were able to identify that the variables water type (i.e. freshwater, marine, both), water body type (i.e. Sound/Bay/Inlet, Still Water, Open Coast), and water body name were highly correlated. Therefore, we chose water body name, as this is the most specific of the three variables.
+In fitting our Negative Binomial model, we ran into the issue of collinearity among the predictors. Using VIF, we were able to identify that the variables water type (i.e. freshwater, marine, both), water body type (i.e. Sound/Bay/Inlet, Still Water, Open Coast), and water body name were highly correlated. Therefore, we chose water body name, as this is the most specific of the three variables.
 
 One consideration in approaching this research question was whether it was appropriate to include an offset term based on the number of days a beach is "eligible" for beach actions. However, a major class of beach actions include rain and weather advisories, like hurricanes, that can affect beaches during their non-swimming seasons. For example, Atlantic hurricane season takes place from June through November, whereas swimming season on Long Island, NY, which is on the Atlantic ocean, takes place from June through September (Memorial Day to Labor Day). Therefore, we decided that it would be too restrictive to include an offset term.
 
@@ -281,11 +286,13 @@ $$
 $$
 Using this notation, the fundamental negative binomial regression model for a beach $i$ is written as $$Pr(Y=y_i\mid\mu_i, \alpha) =\frac{\Gamma(y_i +\alpha^{-1})}{\Gamma(\alpha^{-1})\Gamma(y_i+1)}\left(\frac{1}{1+\alpha\mu_i}\right)^{\alpha^{-1}}\left(\frac{\alpha\mu_i}{1+\alpha\mu_i}\right)^{y_i}.$$
 
-Finally, as prediction is a secondary goal of this analysis, we will create a test set comprised of the second most recent observation for each tier 1 beach as our test set. We will then use our model to predict the number of days under beach action for the test set, which will give us some insight into our model's predictive accuracy using metrics such as the mean square error.
+Upon inspection of the residual plots, specifically the QQ plot of the deviance residuals and the plot of the residuals vs. fitted values, the model assumptions appear satisfactory. 
+
+Finally, as prediction is a secondary goal of this analysis, we will evaluate the predictive accuracy of our model using a test set comprised of the most recent observations for tier 1 beaches (~30% of tier 1 beaches). Once we have obtained predictions for the number of days under beach action for the test set, we will evaluate performance using the root mean square error.
 
 ## Measuring Pollution
 
-In this question, we will seek to better understand how pollution is distributed across US waters, such as in the Pacific Ocean, Atlantic Ocean, Gulf of Mexico, etc. Our response variable is the number of pollutants found at a given beach since 2015 (note that pollutants can repeat if they return the next year). Our main variable of interest will be water body name, but we will include other covariates from our first research question as controls in our model.
+In this question, we will seek to better understand how pollution is distributed across US waters, such as in the Pacific Ocean, Atlantic Ocean, Gulf of Mexico, etc. Our response variable is the number of pollutants found at a given beach since 2015 (note that pollutants can repeat if they return the next year and/or pollutants may persist). Our main variable of interest will be water body name, but we will include other covariates from our first research question as controls in our model.
 
 One issue with model fitting of this type is that the observations are not independent because pollutants at beaches within the same main body of water are likely correlated. Therefore, the independence assumption that most simple generalized linear models require to fit is violated.  One might consider an aggregated approach, where rather than considering the individual beaches in a body of water, we consider the average of all beaches within a body of water. While this aggregated approach would be independent, it would not take advantage of all of the data. In our dataset, there are 12 water bodies, so this aggregate approach would only consider 12 data points, which would result in very low power. Another approach would be to fit 12 separate models, one for the beaches in each body of water. However, this results in multiple regression models for each body of water and does not take advantage of the information in the data from other bodies of water. This can also add noise to the estimates in each model, as the models are not built off of that much data.
 
@@ -295,9 +302,7 @@ The full model specification is as follows for the $i$-th beach for the $j$-th b
 
 $$
 \begin{aligned}
-Y_{ij} = (\gamma_{00}+u_{0j})&+\gamma_{10}\text{Beach Length}_{ij} + \gamma_{30}I(\text{Beach Owner}_{ij} = \text{Public}) + \gamma_{40}\text{Swim Season Beach Days}_{ij} \\
-&+\gamma_{60}I(\text{Action Type}_{ij} = \text{Permanent Closure}) + \gamma_{70}I(\text{Action Type}_{ij} = \text{Posing}) \\
-&= \gamma_{80}I(\text{Action Type}_{ij} = \text{Rain Advisory})
+Y_{ij} = (\gamma_{00}+u_{0j})&+\gamma_{10}\text{Beach Length}_{ij} + \gamma_{20}I(\text{Beach Owner}_{ij} = \text{Public}) + \gamma_{30}\text{Swim Season Beach Days}_{ij}
 \end{aligned}
 $$
 where $u_{0j}$ is the random effect term. Using this modeling approach, we will be able to decipher how much of the variance in total pollutants at beaches can be explained by the body of water that these beaches find themselves situated near. We will present the variation among the bodies of water visually by plotting the overall model estimate for the intercepts.
@@ -306,7 +311,7 @@ where $u_{0j}$ is the random effect term. Using this modeling approach, we will 
 
 For this question, we will use a descriptive analysis approach. Our goal is to look at how governments communicate with their citizens about their beaches. To approach this question, for each state, we will find the proportion of beaches in that state which use each of the following modes of communication: posting on the internet, posting at the beach, sending to a phone list, announcing in the radio, announcing on TV, announcing on radio, providing results upon request, and other. We will only consider the most recent observation for each beach, as this probably include the most current methods of communication used by that beach. We also have information regarding the environmental literacy rating for each state.
 
-Using this information, we will create a Shiny app. In our Shiny app, the user will be able to select which method of communication that they are interested in. Then, a plot of the Mainland USA will appear with the states filled in by proportion of beaches in that state which use that method of communication. Additionally, the user will see a point in the center of each state whose size represents the environmental literacy rating in that state.
+Using this information, we will create a Shiny app. In our Shiny app, the user will be able to select which method of communication that they are interested in. Then, a plot of the Mainland USA will appear with the states filled in by proportion of beaches in that state which use that method of communication. Additionally, the user will be able to select whether they would like to view environmental literacy ratings as a point in the center of each state whose size represents the environmental literacy rating in that state.
 
 ```{r}
 state_long_lat <- read_csv("data/state_long_lat.csv")
@@ -414,7 +419,7 @@ pred_lab_train <- rep("Predicted",length(train_preds))
 true_lab_train<- rep("True", length(train_true))
 lab_train <- c(pred_lab_train, true_lab_train)
 vals_train = c(train_preds, train_true)
-train_rmse <- mean((train_true - train_preds) ^ 2)
+train_rmse <- sqrt(mean((train_true - train_preds) ^ 2))
 
 test_preds <- predict(m, risk_t, type = "response", na.action = na.pass)
 test_true <- risk_t$no_of_days_under_beach_action
@@ -422,7 +427,7 @@ risk_t <- cbind(risk_t, test_preds)
 pred_lab_test <- rep("Predicted", length(test_preds))
 true_lab_test<- rep("True", length(test_true))
 lab_test <- c(pred_lab_test, true_lab_test)
-test_rmse <- mean((test_true - test_preds) ^ 2)
+test_rmse <- sqrt(mean((test_true - test_preds) ^ 2))
 vals_test <- c(test_preds, test_true)
 
 train_vals <- data_frame(vals_train, lab_train)
@@ -453,7 +458,7 @@ Unfortunately, the results for this section are inconclusive. After we aggregate
 
 ## How States Communicate with Citizens about Their Beaches
 
-Below, one can observe how beaches in each state communicate with residents along with the environmental literacy ratings for each state. To change the method of communication, use the drop-down input to select the desired output.
+Below, one can observe how beaches in each state communicate with residents along with the environmental literacy ratings for each state. To change the method of communication, use the drop-down input to select the desired output. Additionally, use the radio buttons to indicate whether environmental literacy ratings should be superimposed over the states.
 
 ```{r, echo=FALSE}
 state_long_lat <- read_csv("state_long_lat.csv")
@@ -580,15 +585,11 @@ shinyApp(ui = ui, server = server, options = list(height = 800))
 # Appendix
 
 ```{r, fig.align='center', include=F}
-# check what the underlying count distribution is
-Ord_plot(risk$no_of_days_under_beach_action)
-
 # check which variables are significant in an ANOVA test
 anova(m, test="Chisq")
 
 # check which points are more influential
 car::influencePlot(m)
-  
   
 # check for multicollinearity
 car::vif(m)
