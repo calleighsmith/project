@@ -584,31 +584,63 @@ shinyApp(ui = ui, server = server, options = list(height = 800))
 
 # Appendix
 
-```{r, fig.align='center', include=F}
-# check which variables are significant in an ANOVA test
-anova(m, test="Chisq")
+## Measuring Risk: Model Assumptions and Diagnostics
 
-# check which points are more influential
-car::influencePlot(m)
-  
-# check for multicollinearity
-car::vif(m)
-  
-# check if zero-inflated or non-zero-inflated model is better
-AIC(m, m2)
+Below, we use the `DHARMA` package, which uses a simulation-based approach to create readily interpretable scaled (quantile) residuals for generalized linear models, to plot the QQ plot of the residuals as well as the plot of the residuals vs. predicted values.
 
+```{r}
 # plot residuals
 resids <- simulateResiduals(m, integerResponse=T)
 plot(resids)
-
-#outliers
-outliers <- outliers(resids)
-
-# test for zero-inflation
-testZeroInflation(resids)
+testDispersion(resids)
 ```
 
-```{r, include=F}
+Based on the QQ plot, we can see that the residuals follow very closely to the straight line. Similarly, the residuals vs. predicted plot shows the points relatively randomly scattered. The dispersion test and combined adjusted quantile test show signs of over-dispersion, and despite choosing a negative-binomial model to try to mitigate this concern, it does seem like this is still an issue. Below, we evaluate whether there is evidence for a zero-inflated negative binomial model over a regular negative binomial model.
+
+```{r}
+# test for zero-inflation
+testZeroInflation(resids)
+
+# check if zero-inflated or non-zero-inflated model is better
+AIC(m, m2) %>%
+  kable(digits=3) %>%
+    kable_styling(full_width = T)
+```
+
+Based on the output, there is evidence in favor of a zero-inflated negative-binomial model, both in terms of the simulation results as well as comparing the AIC of `m` (the regular negative-binomial model) to `m2` (the zero-inflated negative-binomial model). However, as discussed in the Methodology section, our original modeling approach used a zero-inflated negative-binomial, but the coefficient estimates as well as the predictions from this model did not align with earlier findings from our descriptive analyses (maps in the Introduction) or perform as well on the training/test sets, respectively. Therefore, even though there is a quantitative preference for the zero-inflated model, we opted for the regular model based on our results and domain knowledge.
+
+Below we can view an ANOVA test of the variables in our beach risk model. It appears that all variables are significant except for beach length.
+
+```{r, fig.align='center', include=T}
+# check which variables are significant in an ANOVA test
+anova(m, test="Chisq") %>%
+  kable() %>%
+    kable_styling(full_width = T)
+```
+
+Here we can observe which observations are influential in our model. There are 4 points classified as influential. While this is important to note, we do not want to remove these observations from our training set, as we are still interested in these more extreme values.
+
+```{r}
+# check which points are more influential
+car::influencePlot(m) %>%
+  kable() %>%
+    kable_styling(full_width = T)
+```
+
+Here we confirm that our final model does not have collinear features using VIF. All of the VIF values are below 10, so we can be confident that there is no issue with multicollinearity, which could impact the coefficient estimates and their standard errors.
+
+```{r}
+# check for multicollinearity
+car::vif(m) %>%
+  kable(digits=3) %>%
+  kable_styling(full_width = T)
+```
+
+## Measuring Pollution: Modeling Attempt
+
+Below one can observe our attempt to model the second research question, measuring the number of pollutants at a beach over a five year period from 2015-2020. In the plot below, we see a major problem with our outcome, where the number of pollutants for each beach over a five year period is concentrated mostly at 5 pollutants (1 pollutant per year).
+
+```{r, include=T}
 beach_actions_tier1 <-beach_actions %>%
   filter(beach_id %in% beaches) %>%
   mutate(no_pollutants = case_when(
@@ -635,24 +667,36 @@ pollution <- pollution %>%
   filter(!is.na(waterbody_name))
 
 ggplot(pollution, aes(x=no_pollutants5)) +
-  geom_histogram()
+  geom_histogram() +
+  theme_minimal(base_size = 14) +
+  labs(title= "Distribution of No. of Pollutants Over Last 5 Years\nIs Concentrated at 5",
+       x = "Number of Pollutants (2015-2020)",
+       y= "Number of Beaches")
 ```
 
-```{r, include=F}
-lmm <- lmer(no_pollutants5 ~  beach_length_mi + beach_access + beach_owner + swim_season_beach_days  + (1|waterbody_name), data = pollution)
-summary(lmm)
+Below, one can observe the output of the random intercepts linear mixed model that was proposed in the Methodology section.
+
+```{r, include=T}
+library(stargazer)
+lmm <- lmer(no_pollutants5 ~  beach_length_mi +beach_owner + swim_season_beach_days  + (1|waterbody_name), data = pollution)
+stargazer(lmm, type = "text",
+          digits = 3,
+          ci = T, 
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          digit.separator = "",
+          covariate.labels = c("Beach Length (mi)", "Beach Owner (Public)", "Swim Season (days)"),
+          dep.var.labels = c("No. of Pollutants (2015-2020)"))
 ```
 
-```{r, include=F}
-print(paste0("LMM waterbody name accounts for ", round(0.5871*100/(0.5871+1.66), 2), "% of total variance"))
-```
+The variable waterbody name accounts for `r round(0.3577*100/(0.3577+1.4608), 3)`"% of the total variance of our LMM.
 
-```{r, include=F}
+Below, we plot model diagnostics for this model. It appears that both the Normal QQ Plot of the residuals as well as the plot of the residuals vs. fitted values are both extremely unsatisfactory, thus leading us to conclude that this type of modeling approach is inadequate using the data at hand.
+
+```{r, include=T}
 plot(lmm)
 qqnorm(resid(lmm))
 qqline(resid(lmm))
 ```
-
 
 # References
 
