@@ -582,6 +582,38 @@ shinyApp(ui = ui, server = server, options = list(height = 800))
 
 # Discussion
 
+## Interpretations and Implications
+
+### Measuring Risk
+
+Based on the negative-binomial model output, we can observe that water body is the only statistically significant variable in measuring risk. In particular, compared to beaches located on the Atlantic Ocean, beaches situated on the Gulf of Mexico are expected to have 2.2 times more days under beach actions, whereas beaches situated on the Pacific Ocean are expected to have about 6 times more days under beach action, holding all else constant. This supports the findings from our earlier descriptive analysis from the Introduction, where we could see that the Gulf of Mexico and the Pacific Ocean had more at risk beaches. Additionally, it looks like beaches on the Great Lakes (incidence rate ratio = 1.230) are more at risk than those on the Atlantic Ocean, whereas beaches on the Long Island Sound (incidence rate ratio = 0.777) are less at risk than those on the Atlantic Ocean. This information is useful as it can help policy makers decide where to allocate resources to ensure that at-risk beaches are protected in the future.
+
+Although not a statistically significant variable, compared to privately owned beaches, publicly owned beaches are expected to have approximately 0.563 times more days under beach action, holding all else constant. This statistic indicates that public ownership of beaches reduces the risk of a beach. A reason for this might be that maintaining beaches requires significant resources and upkeep that private owners might not have access to, either due to cost or lack of expertise. For example, treating pollutants at beaches might require scientific expertise that individuals or private residences or corporations do not have.
+
+Finally, it seems like the number of days in a beach’s swim season and the beach length do not impact a beach’s risk that much. In particular, the incidence rate ratios for these variables are very close to 1 and their p-values are well above the 0.05 significance threshold.
+
+As a secondary goal of this analysis, we examined the predictive accuracy of this risk model. Using this model, the test RMSE is around 56 days, which is more than the train RMSE of about 41 days. Therefore, there is evidence of overfitting. Generally, it appears like for both the training and test sets, the predicted values follow a similar distribution as the true distribution. However, there is a spike in the predicted values around 60 days. Upon inspecting these predicted values, it appears that our model is over predicting the number of days under beach action for beaches in the Pacific Ocean. If this model is used to predict the number of days under beach action in the Pacific Ocean, the user should keep this in mind and potentially adjust for this over prediction.
+
+### Government Communication with Locals
+
+Based on the Shiny app, we can observe that the ways that the way local governments communicate with citizens about beach advisories and closings varies by state. The most common forms of communication across all states are posting on the internet (exceptions: California, Massachusetts, and Rhode Island) and posting at the beach (exceptions: California, Alabama, and Rhode Island). On the other hand, less common forms of communication across the map involve announcing on the radio (exceptions: New York, Pennsylvania, and North Carolina), announcing on TV (exceptions: New York and North Carolina), and providing incident reports upon request (exceptions: Maine, Louisiana, and South Carolina).
+
+Focusing on the state of North Carolina, the major methods of communication used to report beach advisories and closings, in order of the most number of beaches using this form of communication, are: announcing in the newspaper, posting on the internet, posting at the beach, announcing on the radio, announcing on TV, and sending to a phone list. North Carolina beaches do not provide incident reports upon request (likely because they are already transparent in their communication via other means) or have other methods of communication besides those mentioned. North Carolina's environmental literacy rating is classified as "good" at 63.75% (10th best among the states).
+
+In the same way that we have just provided an overview of some relevant findings from our app, we hope that the public, environmentalists, and policymakers alike can use our app to understand the trends and disparities in how beaches are communicating with residents on a state level.
+
+## Limitations
+
+We acknowledge that there are several limitations to our analysis. First, except for our examination of government communication, our analysis revolves mainly around tier 1 beaches located on the mainland USA. This poses an obstacle to generalizability, as international, Hawaiian, and Alaskan beaches are not considered in this analysis. Additionally, tier 1 beaches are classified as such because they are already at high risk. Other analyses including beaches outside of mainland USA and beaches with lower risk levels would likely provide different but valuable insights.
+
+Second, the data available for this analysis, although thorough in terms of documenting beach advisories and closings, did not include information about other covariates that we would have been interested in exploring. In our risk model, we determine that the body water a beach is located on is significant, but it must be noted that the risk that our model is picking up on based on water body is a much more complex issue that revolves around the local physical, chemical, and biological processes that are present in these bodies of water. For example, while we can say that beaches on the Pacific Ocean are more likely to be at risk, there is (1) variability among risk levels of beaches in the Pacific Ocean and (2) more indicative variables contributing to this risk that we did not have access to when building our model. 
+
+Similarly, the data available for beaches in regards to pollution and water quality were unreliable and insufficient for conducting the analysis that we originally proposed.
+
+## Future Directions
+
+## Conclusion
+
 # Appendix
 
 ## Measuring Risk: Model Assumptions and Diagnostics
