@@ -11,7 +11,7 @@ runtime: shiny
 ---
 
 ```{r setup-and-packages, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message=F, warning=F)
+knitr::opts_chunk$set(echo = FALSE, message=F, warning=F, fig.align='center')
 library(MASS)
 library(tidyverse)
 library(splitstackshape)
@@ -122,11 +122,11 @@ risk <- inner_join(risk2, t1stats) %>%
 # Introduction
 ## Overview
 
-According to he National Ocean Service, "Our oceans and coasts touch every American every day - providing us with places to live, food to eat, jobs, commerce, recreation, energy, even medicines that heal" [1]. Unfortunately, waters globally are highly vulnerable to human actions and exposed to threats such as pollution, climate change, algae blooms, coastal development, and more. In order to ensure the health of these natural environments and those who depend on them, it is essential that we understand the current status of coastal waters and which beaches are at risk for the future.
+According to the National Ocean Service, "Our oceans and coasts touch every American every day - providing us with places to live, food to eat, jobs, commerce, recreation, energy, even medicines that heal" [1]. Unfortunately, waters globally are highly vulnerable to human actions and exposed to threats such as pollution, climate change, algae blooms, coastal development, and more. In order to ensure the health of these natural environments and those who depend on them, it is essential that we understand the current status of coastal waters and which beaches are at risk for the future.
 
 This paper will identify risk factors for the environmental degradation of beaches, which can in turn guide legislators to develop regulations regarding these bodies of water. Additionally, environmental protection of the oceans and coasts is futile without the education and engagement of the public. Public knowledge of coastal conservation is limited. According to a survey by Lotze et al., 70% of respondents believe the marine environment is under threat from human activities, but only 15% thought the ocean's health was poor or threatened [2]. By statistically analyzing data relating to the oceans and the coasts and presenting it in a way that can be understood by a general audience, this project has the ability to illustrate a clear picture of the threats to aquatic bodies in the U.S. and inform marine managers, policy makers, conservation practitioners, and educators to improve marine management and conservation programs.
 
-In our analysis, we will look at the following research questions:
+In our analysis, we will examine the following research questions:
 
 - **Measuring Risk Factors:** Can we predict the number of beach actions (beach-specific advisories or closings issued by the reporting state or local governments) based on a beach's characteristics? Similarly, are certain variables more valuable in predicting beach actions?
 - **Measuring Pollution**: How are the different types of pollution (algal, animal, sewer line, etc.) distributed across U.S. waters? Are certain regions more prone to certain pollution types of pollution than others?
@@ -136,7 +136,7 @@ In our analysis, we will look at the following research questions:
 
 Our data were obtained through the Environmental Protection Agency (EPA) as part of their BEACON 2.0 online system [3]. The EPA created the BEach Advisory and Closing Online Notification (BEACON) to meet the Agency's requirement to provide the public a database of pollution occurrences for coastal recreational waters. Under the Beaches Environmental Assessment and Coastal Health (BEACH) Act of 2000, EPA provides annual grants to coastal and Great Lakes states, territories, and eligible tribes to help local authorities monitor their coastal and Great Lakes beaches and notify the public of water quality conditions that may be unsafe for swimming. BEACON contains state-reported beach monitoring and notification data and is fully available online without the need for special permissions.
 
-The BEACON 2.0 online tool provides many reports on all beaches in the United States. Available datasets include those related to each action for a beach, beach attributes and profiles, beach days, beach monitoring frequency, possible pollution sources, water quality, tier 1 beach information state summaries, and more. Using BEACON 2.0's user guide found [here](https://www.epa.gov/sites/production/files/2014-08/documents/beacon_usersguide.pdf), one can view a full data dictionary, information on how to use the database, and basic summary statistics on some of the variables.
+The BEACON 2.0 online tool provides many reports on all beaches in the United States. Available datasets include those related to each action for a beach, beach attributes and profiles, beach days, beach monitoring frequency, possible pollution sources, water quality, tier 1 beach information, state summaries, and more. Using BEACON 2.0's user guide found [here](https://www.epa.gov/sites/production/files/2014-08/documents/beacon_usersguide.pdf), one can view a full data dictionary, information on how to use the database, and basic summary statistics on some of the variables.
 
 In this analysis, we will mostly focus on Tier 1 beaches, which tend to have the highest risk and the most available data across all of the datasets. States and territories designate their significant public beaches as Tier 1 beaches, which is a requirement of the BEACH Act grant program. In order to deal with issues of spatial correlation, we will take a stratified random sample of 70% of the beaches where data were available from the year 2020, stratifying by beach ownership (private/public) and body of water, which results in about 1,497 beaches in this analysis.
 
@@ -366,13 +366,13 @@ labels <- c("Intercept", "Beach Length (mi)", "Water Body (Great Lakes)", "Water
 m<- glm.nb(no_of_days_under_beach_action ~ . -year -water_type-waterbody_type-beach_access-swim_status, risk)
 
 m2 <- zeroinfl(no_of_days_under_beach_action ~ . -year  -water_type-waterbody_type-beach_access-swim_status, risk, dist="negbin")
-tab_model(m2, digits = 4, auto.label = F,
+tab_model(m2, digits = 3, auto.label = F,
           pred.labels = labels, show.zeroinf = F, 
           dv.labels = "Number of Days Under Beach Action"
 )
 ```
 
-As prediction is also a motive for this research question, below we investigate this model's ability to predict the number of days under beach action for both the training and test data.
+As prediction is also a motive for this research question, we investigate this model's ability to predict the number of days under beach action for both the training and test data. Plots of the true vs. predicted values for both the training and test data appeared satisfactory, with the predicted values closely matching the distribution of the true values (see Appendix).
 
 ```{r data-wrangling-test, fig.width=8, fig.height=4}
 ba_t <- beach_attributes %>%
@@ -444,13 +444,7 @@ plot2 <- ggplot() +
   theme_minimal()+
   labs(title="Testing Set", x = "No. Days Under Beach Action",
        y="Number of Beaches", fill="Value")
-
-(plot1 + plot2)  + plot_annotation(tag_levels = 'A', title = "Evaluating NB Model's Predictive Accuracy")+ 
-  plot_layout(guides = 'collect')
-
 ```
-
-While inference is the main goal of this model, it is informative to have some information about how well this model predicts how many days a beach will be under action. Using this model, the test RMSE is `r round(test_rmse, 3)`, which is more than the train RMSE, which is `r round(train_rmse,3)`. As a result, it appears like our model may be overfitting. We will explore the discrepancies between the fitted and true values in the Discussion.
 
 ## Measuring Pollution
 
@@ -588,11 +582,11 @@ shinyApp(ui = ui, server = server, options = list(height = 800))
 
 Based on the negative-binomial model output, we can observe that water body is the only statistically significant variable in measuring risk. In particular, compared to beaches located on the Atlantic Ocean, beaches situated on the Gulf of Mexico are expected to have 2.2 times more days under beach actions, whereas beaches situated on the Pacific Ocean are expected to have about 6 times more days under beach action, holding all else constant. This supports the findings from our earlier descriptive analysis from the Introduction, where we could see that the Gulf of Mexico and the Pacific Ocean had more at risk beaches. Additionally, it looks like beaches on the Great Lakes (incidence rate ratio = 1.230) are more at risk than those on the Atlantic Ocean, whereas beaches on the Long Island Sound (incidence rate ratio = 0.777) are less at risk than those on the Atlantic Ocean. This information is useful as it can help policy makers decide where to allocate resources to ensure that at-risk beaches are protected in the future.
 
-Although not a statistically significant variable, compared to privately owned beaches, publicly owned beaches are expected to have approximately 0.563 times more days under beach action, holding all else constant. This statistic indicates that public ownership of beaches reduces the risk of a beach. A reason for this might be that maintaining beaches requires significant resources and upkeep that private owners might not have access to, either due to cost or lack of expertise. For example, treating pollutants at beaches might require scientific expertise that individuals or private residences or corporations do not have.
+Although not a statistically significant variable, compared to privately owned beaches, publicly owned beaches are expected to have approximately 0.563 times more days under beach action, holding all else constant. This statistic indicates that public ownership of beaches reduces the risk of a beach. A reason for this might be that maintaining beaches requires significant resources and upkeep that private owners might not have access to, either due to cost or lack of expertise. For example, treating pollutants at beaches might require scientific procedures that individuals or private residences or corporations do not have.
 
 Finally, it seems like the number of days in a beach’s swim season and the beach length do not impact a beach’s risk that much. In particular, the incidence rate ratios for these variables are very close to 1 and their p-values are well above the 0.05 significance threshold.
 
-As a secondary goal of this analysis, we examined the predictive accuracy of this risk model. Using this model, the test RMSE is around 56 days, which is more than the train RMSE of about 41 days. Therefore, there is evidence of overfitting. Generally, it appears like for both the training and test sets, the predicted values follow a similar distribution as the true distribution. However, there is a spike in the predicted values around 60 days. Upon inspecting these predicted values, it appears that our model is over predicting the number of days under beach action for beaches in the Pacific Ocean. If this model is used to predict the number of days under beach action in the Pacific Ocean, the user should keep this in mind and potentially adjust for this over prediction.
+As a secondary goal of this analysis, we examined the predictive accuracy of this risk model (see Appendix). Using this model, the test RMSE is around 56 days, which is more than the train RMSE of about 41 days. Therefore, there is evidence of overfitting. Generally, it appears like for both the training and test sets, the predicted values follow a similar distribution as the true distribution. However, there is a spike in the predicted values around 60 days. Upon inspecting these predicted values, it appears that our model is over predicting the number of days under beach action for beaches in the Pacific Ocean. If this model is used to predict the number of days under beach action in the Pacific Ocean, the user should keep this in mind and potentially adjust for this over prediction.
 
 ### Government Communication with Locals
 
@@ -608,7 +602,7 @@ We acknowledge that there are several limitations to our analysis. First, except
 
 Second, the data available for this analysis, although thorough in terms of documenting beach advisories and closings, did not include information about other covariates that we would have been interested in exploring. In our risk model, we determine that the body water a beach is located on is significant, but it must be noted that the risk that our model is picking up on based on water body is a much more complex issue that revolves around the local physical, chemical, and biological processes that are present in these bodies of water. For example, while we can say that beaches on the Pacific Ocean are more likely to be at risk, there is (1) variability among risk levels of beaches in the Pacific Ocean and (2) more indicative variables contributing to this risk that we did not have access to when building our model, such as water temperature, salinity, pollutant concentrations, aquatic life present, etc. 
 
-Similarly, the data available for beaches in regards to pollution and water quality were unreliable and insufficient for conducting the analysis that we originally proposed. Most tier 1 beaches only reported their pollutants once a year, making it difficult to get a continuous picture of a beach's pollutants. Additionally, many of the measurements in the water quality dataset were vaguely described (i.e., "General Observation"), posing an obstacle to understanding the types of pollution that were present at these beaches. Therefore, while the data available were robust in terms of beach closures and advisories, reliable information about pollutants, such as the scientific names for the pollutants (as opposed to general terms) and consistent and quantitative measurements, was lacking. In the next section, we propose a general data collection strategy which would remedy this.
+Similarly, the data available for beaches in regards to pollution and water quality were unreliable and insufficient for conducting the analysis that we originally proposed. Most tier 1 beaches only reported their pollutants once a year, making it difficult to get a continuous picture of a beach's pollutants. Additionally, many of the measurements in the water quality dataset were vaguely described (i.e., "General Observation"), posing an obstacle to understanding the types of pollution that were present at these beaches. Therefore, while the data available were robust in terms of beach closures and advisories, reliable information about pollutants, such as the scientific names for the pollutants (as opposed to general terms) and consistent and quantitative measurements, was lacking. In the next section, we propose a general data collection strategy which could remedy this.
 
 Finally, although we tried to reduce the noise of the spatial relationships that are surely present in our environmental data by taking a stratified random sample by water body, these dependencies are likely still present. Therefore, we acknowledge that our risk model might not perfectly satisfy the independence assumption that generalized linear models, such as the negative binomial model used.
 
@@ -638,23 +632,25 @@ United States"](https://trace.tennessee.edu/cgi/viewcontent.cgi?article=5129&con
 
 Below, we use the `DHARMA` package, which uses a simulation-based approach to create readily interpretable scaled (quantile) residuals for generalized linear models, to plot the QQ plot of the residuals as well as the plot of the residuals vs. predicted values.
 
-```{r}
+```{r, message=F}
 # plot residuals
 resids <- simulateResiduals(m, integerResponse=T)
 plot(resids)
-testDispersion(resids)
+invisible(testDispersion(resids))
 ```
 
 Based on the QQ plot, we can see that the residuals follow very closely to the straight line. Similarly, the residuals vs. predicted plot shows the points relatively randomly scattered. The dispersion test and combined adjusted quantile test show signs of over-dispersion, and despite choosing a negative-binomial model to try to mitigate this concern, it does seem like this is still an issue. Below, we evaluate whether there is evidence for a zero-inflated negative binomial model over a regular negative binomial model.
 
 ```{r}
 # test for zero-inflation
-testZeroInflation(resids)
+invisible(testZeroInflation(resids))
 
 # check if zero-inflated or non-zero-inflated model is better
-AIC(m, m2) %>%
+aic_test_disp <- AIC(m, m2)
+rownames(aic_test_disp) <- c("Negative-Binomial Model", "Zero-Inflated Negative-Binomial Model")
+aic_test_disp %>%
   kable(digits=3) %>%
-    kable_styling(full_width = T)
+    kable_styling(full_width=T)
 ```
 
 Based on the output, there is evidence in favor of a zero-inflated negative-binomial model, both in terms of the simulation results as well as comparing the AIC of `m` (the regular negative-binomial model) to `m2` (the zero-inflated negative-binomial model). However, as discussed in the Methodology section, our original modeling approach used a zero-inflated negative-binomial, but the coefficient estimates as well as the predictions from this model did not align with earlier findings from our descriptive analyses (maps in the Introduction) or perform as well on the training/test sets, respectively. Therefore, even though there is a quantitative preference for the zero-inflated model, we opted for the regular model based on our results and domain knowledge.
@@ -663,8 +659,10 @@ Below we can view an ANOVA test of the variables in our beach risk model. It app
 
 ```{r, fig.align='center', include=T}
 # check which variables are significant in an ANOVA test
-anova(m, test="Chisq") %>%
-  kable() %>%
+anova_vars <- anova(m, test="Chisq")
+rownames(anova_vars)<- c("Intercept", "Beach Length (mi)", "Waterbody Name", "Beach Owner", "Swim Season (days)")
+anova_vars %>%
+  kable(digits=3) %>%
     kable_styling(full_width = T)
 ```
 
@@ -673,7 +671,7 @@ Here we can observe which observations are influential in our model. There are 4
 ```{r}
 # check which points are more influential
 car::influencePlot(m) %>%
-  kable() %>%
+  kable(digits=3) %>%
     kable_styling(full_width = T)
 ```
 
@@ -681,10 +679,21 @@ Here we confirm that our final model does not have collinear features using VIF.
 
 ```{r}
 # check for multicollinearity
-car::vif(m) %>%
+vif_diag <- car::vif(m) 
+rownames(vif_diag) <-c("Beach Length (mi)", "Waterbody Name", "Beach Owner", "Swim Season (days)")
+vif_diag %>%
   kable(digits=3) %>%
   kable_styling(full_width = T)
 ```
+
+## Measuring Risk: Predictive Accuracy
+
+```{r, fig.width=8, fig.height=4}
+(plot1 + plot2)  + plot_annotation(tag_levels = 'A', title = "Evaluating NB Model's Predictive Accuracy")+ 
+  plot_layout(guides = 'collect')
+```
+
+While inference was the main goal of our risk model, it is informative to have some information about how well this model predicts how many days a beach will be under action. Using this model, the test RMSE is `r round(test_rmse, 3)`, which is more than the train RMSE, which is `r round(train_rmse,3)`. As a result, it appears like our model may be overfitting, particularly for beaches in the Pacific Ocean (as noted in the Discussion section).
 
 ## Measuring Pollution: Modeling Attempt
 
@@ -726,10 +735,10 @@ ggplot(pollution, aes(x=no_pollutants5)) +
 
 Below, one can observe the output of the random intercepts linear mixed model that was proposed in the Methodology section.
 
-```{r, include=T}
+```{r, include=T, results = "asis"}
 library(stargazer)
 lmm <- lmer(no_pollutants5 ~  beach_length_mi +beach_owner + swim_season_beach_days  + (1|waterbody_name), data = pollution)
-stargazer(lmm, type = "text",
+stargazer(lmm, type = "html",
           digits = 3,
           ci = T, 
           star.cutoffs = c(0.05, 0.01, 0.001),
@@ -743,7 +752,8 @@ The variable waterbody name accounts for `r round(0.3577*100/(0.3577+1.4608), 3)
 Below, we plot model diagnostics for this model. It appears that both the Normal QQ Plot of the residuals as well as the plot of the residuals vs. fitted values are both extremely unsatisfactory, thus leading us to conclude that this type of modeling approach is inadequate using the data at hand.
 
 ```{r, include=T}
-plot(lmm)
-qqnorm(resid(lmm))
+plot(lmm, main = "Major Issues in LMM Residuals vs. Fitted Plot", ylab="Pearson Residuals", xlab="Fitted Values")
+
+qqnorm(resid(lmm), main="Major Issues in LMM Normal QQ Plot")
 qqline(resid(lmm))
 ```

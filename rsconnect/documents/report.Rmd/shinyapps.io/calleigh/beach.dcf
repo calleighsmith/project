@@ -5,8 +5,8 @@ account: calleigh
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3841306
-bundleId: 4514623
+bundleId: 4526676
 url: https://calleigh.shinyapps.io/beach/
-when: 1619293136.66784
+when: 1619552730.87282
 asMultiple: FALSE
 asStatic: FALSE
